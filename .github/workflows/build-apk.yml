@@ -22,22 +22,23 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20
+        node-version: 22
 
-    - name: Prepare Web Directory
+    - name: Setup Web Directory
       run: |
         mkdir -p www
-        cp index.html www/
+        find . -maxdepth 1 -iname "index.html" -exec cp {} www/index.html \;
         [ -f manifest.json ] && cp manifest.json www/ || true
+        ls -la www/
 
-    - name: Install Capacitor & Add Android
+    - name: Install Dependencies & Init Capacitor
       run: |
         npm init -y
-        npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+        npm install @capacitor/core @capacitor/cli @capacitor/android
         npx cap init "Survey App" "com.ashwini.surveyapp" --web-dir www
         npx cap add android
 
-    - name: Add Permissions
+    - name: Add Android Permissions
       run: |
         sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" />\n<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' android/app/src/main/AndroidManifest.xml
 
