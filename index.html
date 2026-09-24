@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ashwini's Survey App</title>
+    
+    <!-- PWA Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; display: flex; justify-content: center; width: 100vw; overflow-x: hidden; }
+        
+        .calculator-container { background-color: #ffffff; padding: 12px; width: 100%; max-width: 520px; min-height: 100vh; box-sizing: border-box; overflow-x: hidden; position: relative; }
+
+        /* PERMANENT NETLIFY BADGE REMOVAL FIX */
+        #netlify-badge, 
+        a[href*="netlify.com"], 
+        a[href*="netlify.com/support"], 
+        .netlify-badge, 
+        iframe[src*="netlify"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+        }
+
+        /* HOME DASHBOARD STYLES */
+        .home-dashboard { display: block; padding: 5px; width: 100%; box-sizing: border-box; }
+        
+        .profile-container { text-align: center; margin-bottom: 15px; }
+        .profile-avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #059669; box-shadow: 0 4px 15px rgba(0,0,0,0.15); background-color: #e2e8f0; }
+
+        .welcome-banner { background: linear-gradient(135deg, #065f46 0%, #059669 100%); color: white; padding: 20px 15px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(5,150,105,0.2); border-bottom: 4px solid #f59e0b; }
+        .welcome-banner h3 { margin: 0 0 8px 0; font-size: 18px; font-weight: 800; }
+        .welcome-banner p { margin: 0; font-size: 13px; opacity: 0.95; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .dash-card { background: #ffffff; border: 2px solid #e2e8f0; border-radius: 12px; padding: 22px 10px; text-align: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .dash-card:hover { border-color: #059669; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(5,150,105,0.15); }
+        .dash-card span { font-size: 32px; display: block; margin-bottom: 8px; }
+        .dash-card h4 { margin: 0; font-size: 13px; color: #1e293b; font-weight: 700; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .toggle-group { display: flex; justify-content: space-between; margin-bottom: 15px; background: #e2e8f0; border-radius: 8px; padding: 4px; gap: 4px; }
+        .toggle-group label { flex: 1; text-align: center; padding: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; color: #475569; font-size: 12px; }
+        .toggle-group input[type="radio"] { display: none; }
+        .toggle-group input[type="radio"]:checked + label { background: #065f46; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        
+        .toggle-group-wrap { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 15px; background: #e2e8f0; border-radius: 8px; padding: 4px; }
+        .toggle-group-wrap label { flex: 1 1 30%; text-align: center; padding: 8px 2px; cursor: pointer; border-radius: 6px; font-weight: bold; color: #475569; font-size: 11px; }
+        .toggle-group-wrap input[type="radio"] { display: none; }
+        .toggle-group-wrap input[type="radio"]:checked + label { background: #065f46; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        .input-group { margin-bottom: 12px; display: flex; gap: 10px; align-items: center; }
+        .input-field { flex: 1; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; color: #334155; font-size: 13px; }
+        input[type="number"], input[type="text"], input[type="file"], select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; background-color: #f8fafc; }
+        
+        button.action-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #059669, #047857); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.2s; }
+        button.action-btn:active { transform: scale(0.98); }
+        button.danger-btn { background: #dc2626; padding: 6px 10px; margin-top: 5px; width: auto; font-size: 12px; border-radius: 6px; color: white; border: none; cursor: pointer; }
+        button.export-btn { background: linear-gradient(135deg, #8b5cf6, #6d28d9); padding: 10px; margin-top: 8px; width: 100%; font-size: 14px; border-radius: 6px; color: white; border: none; cursor: pointer; font-weight:bold; }
+        
+        .result-box { margin-top: 15px; padding: 15px; background-color: #ecfdf5; border-left: 5px solid #059669; border-radius: 6px; display: none; }
+        .result-item { margin-bottom: 8px; font-size: 15px; color: #1e293b; }
+        .highlight { font-weight: bold; color: #dc2626; font-size: 17px; }
+        
+        .contact-info { text-align: center; margin-top: 20px; padding-top: 10px; border-top: 2px dashed #cbd5e1; font-size: 13px; color: #475569; font-weight: 600; }
+        
+        /* Floating Home Button inside Working Area */
+        .floating-home-btn {
+            position: absolute; top: 8px; left: 8px; z-index: 1000;
+            background: rgba(6, 95, 70, 0.9); color: white; border: none; 
+            padding: 5px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; 
+            cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .floating-home-btn:hover { background: rgba(5, 150, 105, 1); }
+
+        /* Map Adjustments (Maximized Working Area) */
+        .map-wrapper { position: relative; width: 100%; }
+        #map, #scaleMap, #overlapMap { height: 94vh; width: 100%; border-radius: 8px; border: 2px solid #cbd5e1; margin-top: 2px; z-index: 1; background: #e2e8f0; }
+        .map-controls { margin-top: 2px; background: #ffffff; padding: 6px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .flex-buttons { display: flex; gap: 8px; justify-content: space-between; }
+        
+        .loadingMsg { display: none; color: #059669; font-weight: bold; font-size: 14px; margin-top: 5px; text-align: center; }
+        .scale-info { background: #dcfce7; padding: 6px; border-radius: 6px; font-size: 12px; color: #166534; font-weight: bold; text-align: center; border: 1px solid #bbf7d0; display:none; margin-bottom: 4px; }
+
+        /* PERFECT TEXT-FIT SLIM FLOATING TOOLBAR */
+        .floating-toolbar {
+            position: absolute; top: 8px; right: 8px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(3px);
+            padding: 2px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: inline-flex; flex-direction: column; gap: 2px; 
+            width: auto; min-width: 55px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .floating-toolbar button { 
+            padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 3px; 
+            border: none; cursor: pointer; color: white; text-align: center; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: 0.2s; 
+            opacity: 0.9; width: auto; display: block;
+            white-space: nowrap; line-height: 1.1;
+        }
+        .floating-toolbar button:hover { opacity: 1; }
+        .floating-toolbar button:active { transform: scale(0.95); }
+        
+        .floating-status { 
+            background: rgba(0, 0, 0, 0.85); color: white; font-size: 9px; 
+            padding: 3px; border-radius: 3px; text-align: center; 
+            display: none; margin-bottom: 2px; font-weight: normal; line-height: 1.2; 
+            white-space: normal; word-wrap: break-word; width: 100%; box-sizing: border-box; 
+        }
+
+        .ribbon-tools { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+        .ribbon-tools.hidden { display: none; }
+        .toggle-ribbon-btn { background: rgba(51, 65, 85, 0.85) !important; border: 1px solid #0f172a !important; margin-bottom: 1px; font-size: 9px !important; padding: 3px 4px !important; width: 100% !important; }
+
+        /* ULTRA COMPACT SATELLITE CONTROL PANEL */
+        .floating-control-panel {
+            position: absolute; bottom: 6px; left: 6px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px);
+            padding: 4px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            width: 130px; display: none; border: 1px solid #059669;
+        }
+        .floating-control-panel.active { display: block; }
+        
+        .fullscreen-toggle-btn {
+            position: absolute; top: 45px; left: 8px; z-index: 1000;
+            background: rgba(6, 95, 70, 0.85); color: white; border: none; padding: 4px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); opacity: 0.9;
+        }
+
+        .map-polygon-label { background: rgba(255, 255, 255, 0.85) !important; border: 2px solid #059669 !important; border-radius: 6px !important; font-weight: bold !important; text-align: center !important; color: #b91c1c !important; font-size: 13px !important; box-shadow: 0 2px 5px rgba(0,0,0,0.3) !important; padding: 2px 4px !important; }
+        .edge-label-container { background: transparent; border: none; box-shadow: none; overflow: visible !important; }
+        .edge-label-box { background: rgba(255, 255, 255, 0.85); border: 1px solid; padding: 1px 4px; border-radius: 3px; font-size: 10px; font-weight: bold; white-space: nowrap; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); margin-bottom: 6px; }
+        .split-active { cursor: crosshair !important; }
+    </style>
+</head>
+<body>
+
+<div class="calculator-container" id="mainContainer">
+
+    <!-- HOME DASHBOARD PAGE -->
+    <div id="home-dashboard" class="home-dashboard">
+        <div class="profile-container">
+            <img src="https://lh3.googleusercontent.com/d/1chmn8I9AL0q26TDs4UdAyYiQ-SONfqJE" alt="Ashwini Sir" class="profile-avatar" referrerpolicy="no-referrer">
+        </div>
+
+        <div class="welcome-banner">
+            <h3>Ashwini Sir के Survey App में आपका स्वागत है</h3>
+            <p>नीचे दिए गए मापन उपकरणों में से अपनी आवश्यकतानुसार चयन करें:</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="dash-card" onclick="openTab('calc-tab')">
+                <span>📐</span>
+                <h4>रकबा कैलकुलेटर</h4>
+            </div>
+            <div class="dash-card" onclick="openTab('converter-tab')">
+                <span>🔄</span>
+                <h4>यूनिट कन्वर्टर</h4>
+            </div>
+            <div class="dash-card" onclick="openTab('scalemap-tab')">
+                <span>📏</span>
+                <h4>नक्शा पैमाइश</h4>
+            </div>
+            <div class="dash-card" onclick="openTab('map-tab')">
+                <span>🛰️</span>
+                <h4>सैटलाइट मैप</h4>
+            </div>
+            <div class="dash-card" onclick="openTab('overlap-tab')">
+                <span>🔀</span>
+                <h4>नक्शा मिलान</h4>
+            </div>
+            <div class="dash-card" onclick="alert('आगामी फीचर्स जल्द जोड़े जाएंगे!')">
+                <span>✨</span>
+                <h4>अन्य टूल्स</h4>
+            </div>
+        </div>
+
+        <div class="contact-info">
+            For Any Suggestion contact:- Ashwini Sir(6203243151)
+        </div>
+    </div>
+
+    <!-- 1. रकबा कैलकुलेटर TAB -->
+    <div id="calc-tab" class="tab-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:#065f46; padding:8px 12px; border-radius:6px; color:white;">
+            <button class="home-icon-btn" style="position:static;" onclick="openHome()">🏠 होम</button>
+            <span style="font-weight:bold; font-size:14px;">📐 रकबा कैलकुलेटर</span>
+            <div style="width:40px;"></div>
+        </div>
+
+        <div class="toggle-group">
+            <input type="radio" id="unitKari" name="unit" value="kari" checked><label for="unitKari">कड़ी (Kari)</label>
+            <input type="radio" id="unitFeet" name="unit" value="feet"><label for="unitFeet">फीट (Feet)</label>
+        </div>
+        <div class="toggle-group">
+            <input type="radio" id="shape2" name="shape" value="2" checked onchange="toggleShape()"><label for="shape2">2 भुजा (आयत)</label>
+            <input type="radio" id="shape3" name="shape" value="3" onchange="toggleShape()"><label for="shape3">3 भुजा (त्रिभुज)</label>
+            <input type="radio" id="shape4" name="shape" value="4" onchange="toggleShape()"><label for="shape4">4 भुजा (विषम)</label>
+        </div>
+        <div class="input-group">
+            <div class="input-field"><label id="lblL1">लंबाई 1:</label><input type="number" id="l1" placeholder="0"></div>
+            <div class="input-field" id="divL2" style="display: none;"><label id="lblL2">लंबाई 2 (सामने):</label><input type="number" id="l2" placeholder="0"></div>
+        </div>
+        <div class="input-group">
+            <div class="input-field" id="divW1"><label id="lblW1">चौड़ाई 1:</label><input type="number" id="w1" placeholder="0"></div>
+            <div class="input-field" id="divW2" style="display: none;"><label id="lblW2">चौड़ाई 2 (सामने):</label><input type="number" id="w2" placeholder="0"></div>
+        </div>
+        
+        <!-- Updated Laggi selection with comprehensive options -->
+        <div class="input-group">
+            <div class="input-field">
+                <label>लग्गी की लंबाई (हाथ में):</label>
+                <select id="laggiArea" onchange="checkCustomLaggi('Area')">
+                    <option value="4">4 हाथ</option>
+                    <option value="4.5">4.5 हाथ</option>
+                    <option value="5">5 हाथ</option>
+                    <option value="5.5">5.5 हाथ</option>
+                    <option value="6">6 हाथ</option>
+                    <option value="6.25">6.25 हाथ</option>
+                    <option value="6.5" selected>6.5 हाथ</option>
+                    <option value="7">7 हाथ</option>
+                    <option value="7.5">7.5 हाथ</option>
+                    <option value="8">8 हाथ</option>
+                    <option value="9">9 हाथ</option>
+                    <option value="10">10 हाथ</option>
+                    <option value="11">11 हाथ</option>
+                    <option value="custom">अन्य (Custom)</option>
+                </select>
+            </div>
+        </div>
+        <div class="input-group" id="customLaggiDivArea" style="display:none;">
+            <div class="input-field">
+                <label>कस्टम लग्गी (हाथ):</label>
+                <input type="number" id="customLaggiInputArea" placeholder="हाथ दर्ज करें" value="6.5">
+            </div>
+        </div>
+
+        <button class="action-btn" onclick="calculateArea()">रकबा निकालें</button>
+        <div class="result-box" id="resultBoxArea">
+            <div class="result-item">कुल क्षेत्रफल: <span id="resTotalArea" class="highlight">0</span> वर्ग <span class="unit-text"></span></div>
+            <hr style="border-top: 1px solid #cbd5e1; margin: 10px 0;">
+            <div class="result-item">रकबा: <span class="highlight" id="decimalArea">0 डिसमिल</span></div>
+            <div class="result-item highlight" id="traditionalUnitArea" style="color:#15803d;">0 बीघा, 0 कट्ठा, 0 धूर</div>
+        </div>
+        <div class="contact-info">For Any Suggestion contact:- Ashwini Sir(6203243151)</div>
+    </div>
+
+    <!-- 2. यूनिट कन्वर्टर TAB -->
+    <div id="converter-tab" class="tab-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:#065f46; padding:8px 12px; border-radius:6px; color:white;">
+            <button class="home-icon-btn" style="position:static;" onclick="openHome()">🏠 होम</button>
+            <span style="font-weight:bold; font-size:14px;">🔄 यूनिट कन्वर्टर</span>
+            <div style="width:40px;"></div>
+        </div>
+
+        <div class="toggle-group-wrap">
+            <input type="radio" id="conv1" name="convType" value="decToBkd" checked onchange="toggleConvType()"><label for="conv1">डिसमिल ➡️ कट्ठा</label>
+            <input type="radio" id="conv2" name="convType" value="bkdToDec" onchange="toggleConvType()"><label for="conv2">कट्ठा ➡️ डिसमिल</label>
+            <input type="radio" id="conv3" name="convType" value="decToSqft" onchange="toggleConvType()"><label for="conv3">डिसमिल ➡️ वर्गफीट</label>
+            <input type="radio" id="conv4" name="convType" value="sqftToDec" onchange="toggleConvType()"><label for="conv4">वर्गफीट ➡️ डिसमिल</label>
+            <input type="radio" id="conv5" name="convType" value="katthaToSqft" onchange="toggleConvType()"><label for="conv5">कट्ठा ➡️ वर्गफीट</label>
+            <input type="radio" id="conv6" name="convType" value="sqftToKattha" onchange="toggleConvType()"><label for="conv6">वर्गफीट ➡️ कट्ठा</label>
+        </div>
+        <div id="decInputSection" style="display: block;"><div class="input-group"><label>डिसमिल:</label><input type="number" id="inputDecimal" placeholder="उदा: 10"></div></div>
+        <div id="bkdInputSection" style="display: none;">
+            <div class="input-group">
+                <div class="input-field"><label>बीघा:</label><input type="number" id="inputBigha" placeholder="0"></div>
+                <div class="input-field"><label>कट्ठा:</label><input type="number" id="inputKattha" placeholder="0"></div>
+                <div class="input-field"><label>धूर:</label><input type="number" id="inputDhur" placeholder="0"></div>
+            </div>
+        </div>
+        <div id="sqftInputSection" style="display: none;"><div class="input-group"><label>वर्गफीट:</label><input type="number" id="inputSqft" placeholder="उदा: 1000"></div></div>
+        <div id="katthaOnlyInputSection" style="display: none;"><div class="input-group"><label>कट्ठा:</label><input type="number" id="inputKatthaOnly" placeholder="उदा: 5"></div></div>
+        
+        <div class="input-group">
+            <div class="input-field">
+                <label>लग्गी की लंबाई (हाथ में):</label>
+                <select id="laggiConv" onchange="checkCustomLaggi('Conv')">
+                    <option value="4">4 हाथ</option>
+                    <option value="4.5">4.5 हाथ</option>
+                    <option value="5">5 हाथ</option>
+                    <option value="5.5">5.5 हाथ</option>
+                    <option value="6">6 हाथ</option>
+                    <option value="6.25">6.25 हाथ</option>
+                    <option value="6.5" selected>6.5 हाथ</option>
+                    <option value="7">7 हाथ</option>
+                    <option value="7.5">7.5 हाथ</option>
+                    <option value="8">8 हाथ</option>
+                    <option value="9">9 हाथ</option>
+                    <option value="10">10 हाथ</option>
+                    <option value="11">11 हाथ</option>
+                    <option value="custom">अन्य (Custom)</option>
+                </select>
+            </div>
+        </div>
+        <div class="input-group" id="customLaggiDivConv" style="display:none;">
+            <div class="input-field">
+                <label>कस्टम लग्गी (हाथ):</label>
+                <input type="number" id="customLaggiInputConv" placeholder="हाथ दर्ज करें" value="6.5">
+            </div>
+        </div>
+
+        <button class="action-btn" onclick="convertUnit()">कन्वर्ट करें</button>
+        <div class="result-box" id="resultBoxConv" style="display:block;">परिणाम: <span class="highlight" id="convResultText" style="color:#15803d;">0</span></div>
+        <div class="contact-info">For Any Suggestion contact:- Ashwini Sir(6203243151)</div>
+    </div>
+
+    <!-- 3. नक्शा पैमाइश (Map Scale Measurement) -->
+    <div id="scalemap-tab" class="tab-content">
+        <div class="map-controls" style="margin-top:0; padding:4px;">
+            <div style="display:flex; gap:4px; align-items:center;">
+                <input type="file" id="scaleImageInput" accept="image/png, image/jpeg, application/pdf" onchange="processFile(event, 'scale')" style="font-size:10px; padding:3px;">
+                <select id="scaleUnitInput" style="padding:3px; font-size:10px; width:65px;" onchange="redrawAllCustomDrawings()"><option value="kari">कड़ी</option><option value="feet">फीट</option></select>
+                <select id="areaUnitInput" style="padding:3px; font-size:10px; width:70px;" onchange="redrawAllCustomDrawings()"><option value="decimal">डिसमिल</option><option value="acre">एकड़</option><option value="sqmt">वर्गमीटर</option></select>
+                <button class="action-btn" style="margin-top:0; padding:5px; font-size:10px; background:#059669;" onclick="handleCalibFlow()" id="calibBtn">📏 स्केल</button>
+            </div>
+            <div id="scaleLoadingMsg" class="loadingMsg">⚙️ फाइल लोड हो रही है...</div>
+        </div>
+        
+        <div class="scale-info" id="scaleStatus">✅ स्केल सेट है! नक्शे पर टूल का उपयोग करें।</div>
+
+        <div class="map-wrapper">
+            <div id="scaleMap"></div>
+            <button class="floating-home-btn" onclick="openHome()">🏠 होम</button>
+            <div class="floating-toolbar">
+                <div id="customDrawStatus" class="floating-status"></div>
+                
+                <button class="action-btn" id="pointOkBtn" style="display:none; background:#2563eb; margin:0 0 3px 0; padding:4px 4px;" onclick="confirmStepPoint(scaleMap, scaleDrawnItems)">✅ OK</button>
+                <button class="action-btn" id="pointBackBtn" style="display:none; background:#d97706; margin:0 0 3px 0; padding:4px 4px;" onclick="undoLastPoint()">⬅️ पीछे</button>
+                <button class="action-btn" id="finishDrawBtn" style="display:none; background:#7c3aed; margin:0 0 3px 0; padding:4px 4px;" onclick="finishStepDraw(scaleMap, scaleDrawnItems, 'scaleDrawColor')">🏁 सेव</button>
+                <button class="action-btn" id="finishEditBtn" style="display:none; background:#059669; margin:0 0 3px 0; padding:4px 4px;" onclick="finishEditing()">✅ डन</button>
+
+                <button class="toggle-ribbon-btn" onclick="toggleRibbon(this)">🛠️ मेनू</button>
+                
+                <div class="ribbon-tools">
+                    <button style="background:#2563eb;" onclick="startStepDraw('line', scaleMap, scaleDrawnItems)">〰️ लाइन</button>
+                    <button style="background:#059669;" onclick="startStepDraw('polygon', scaleMap, scaleDrawnItems)">⬠ प्लॉट</button>
+                    
+                    <div style="display:flex; gap:2px; margin-bottom: 2px;">
+                        <input type="color" id="scaleDrawColor" value="#059669" style="width:16px; height:18px; border:none; cursor:pointer; padding:0; border-radius:3px; background:transparent;" title="रंग चुनें">
+                        <button style="flex:1; background:#db2777; margin:0; padding:3px 0;" onclick="toggleColorMode(scaleMap, scaleDrawnItems, 'scaleDrawColor')">🎨 रंग</button>
+                    </div>
+
+                    <button style="background:#8b5cf6;" onclick="activateSplitMode(scaleMap, scaleDrawnItems)">✂️ बाँटें</button>
+                    <button style="background:#d97706;" onclick="toggleEditMode(scaleMap, scaleDrawnItems)">✏️ एडिट</button>
+                    
+                    <button style="background:#0f766e;" onclick="saveProject('scale')">💾 प्रोजेक्ट</button>
+                    <button style="background:#0369a1;" onclick="document.getElementById('loadScaleProject').click()">📂 लोड</button>
+                    <input type="file" id="loadScaleProject" style="display:none;" accept=".json,.geojson" onchange="loadProject(event, 'scale')">
+                    
+                    <button style="background:#4f46e5;" onclick="downloadPDF()">📥 PDF</button>
+                    <button style="background:#dc2626;" onclick="clearDrawings(scaleMap, scaleDrawnItems)">🗑️ साफ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. सैटलाइट टैब -->
+    <div id="map-tab" class="tab-content">
+        <div class="map-wrapper">
+            <div id="map" style="height: 98vh;"></div>
+            <button class="floating-home-btn" onclick="openHome()">🏠 होम</button>
+            <button class="fullscreen-toggle-btn" onclick="toggleSatFloatingPanel()">🔲 कंट्रोल्स</button>
+
+            <div class="floating-toolbar">
+                <div id="satDrawStatus" class="floating-status"></div>
+                
+                <button class="action-btn" id="satPointOkBtn" style="display:none; background:#2563eb; margin:0 0 2px 0; padding:3px 3px;" onclick="confirmStepPoint(map, satDrawnItems)">✅ OK</button>
+                <button class="action-btn" id="satPointBackBtn" style="display:none; background:#d97706; margin:0 0 2px 0; padding:3px 3px;" onclick="undoLastPoint()">⬅️ पीछे</button>
+                <button class="action-btn" id="satFinishDrawBtn" style="display:none; background:#7c3aed; margin:0 0 2px 0; padding:3px 3px;" onclick="finishStepDraw(map, satDrawnItems, 'satDrawColor')">🏁 सेव</button>
+                <button class="action-btn" id="satFinishEditBtn" style="display:none; background:#059669; margin:0 0 2px 0; padding:3px 3px;" onclick="finishEditing()">✅ डन</button>
+
+                <button class="toggle-ribbon-btn" onclick="toggleRibbon(this)">🛠️ मेनू</button>
+                
+                <div class="ribbon-tools">
+                    <button style="background:#2563eb;" onclick="startStepDraw('line', map, satDrawnItems)">〰️ लाइन</button>
+                    <button style="background:#059669;" onclick="startStepDraw('polygon', map, satDrawnItems)">⬠ प्लॉट</button>
+                    
+                    <div style="display:flex; gap:2px; margin-bottom: 2px;">
+                        <input type="color" id="satDrawColor" value="#059669" style="width:16px; height:18px; border:none; cursor:pointer; padding:0; border-radius:3px; background:transparent;" title="रंग चुनें">
+                        <button style="flex:1; background:#db2777; margin:0; padding:3px 0;" onclick="toggleColorMode(map, satDrawnItems, 'satDrawColor')">🎨 रंग</button>
+                    </div>
+
+                    <button style="background:#8b5cf6;" onclick="activateSplitMode(map, satDrawnItems)">✂️ बाँटें</button>
+                    <button style="background:#d97706;" onclick="toggleEditMode(map, satDrawnItems)">✏️ एडिट</button>
+                    
+                    <button style="background:#0f766e;" onclick="saveProject('sat')">💾 प्रोजेक्ट</button>
+                    <button style="background:#0369a1;" onclick="document.getElementById('loadSatProject').click()">📂 लोड</button>
+                    <input type="file" id="loadSatProject" style="display:none;" accept=".json,.geojson" onchange="loadProject(event, 'sat')">
+                    
+                    <button style="background:#4f46e5;" onclick="downloadPDF()">📥 PDF</button>
+                    <button style="background:#dc2626;" onclick="clearDrawings(map, satDrawnItems)">🗑️ साफ</button>
+                </div>
+            </div>
+
+            <!-- ULTRA COMPACT SATELLITE CONTROL PANEL -->
+            <div class="floating-control-panel active" id="satFloatingPanel">
+                <div style="font-size:10px; font-weight:bold; color:#065f46; margin-bottom:3px; text-align:center; border-bottom:1px solid #cbd5e1; padding-bottom:1px;">🛰️ सैटलाइट कंट्रोल्स</div>
+                
+                <div style="display:flex; gap:2px; margin-bottom:3px;">
+                    <input type="text" id="searchPlace" placeholder="जगह..." style="padding:2px 4px; font-size:9px; flex:1; height:18px; border:1px solid #cbd5e1; border-radius:3px;">
+                    <button class="action-btn" style="width: auto; margin-top: 0; padding: 2px 5px; font-size:9px; height:18px;" onclick="searchLocation()">🔍</button>
+                    <button class="action-btn" style="width: auto; margin-top: 0; padding: 2px 5px; font-size:9px; height:18px; background:#16a34a;" onclick="goToLiveLocation()" title="लाइव लोकेशन">📍</button>
+                </div>
+                
+                <div style="display:flex; gap:2px; margin-bottom:3px;">
+                    <select id="satUnitInput" style="padding:0px 2px; font-size:9px; flex:1; height:18px; border:1px solid #cbd5e1; border-radius:3px;" onchange="redrawAllSatDrawings()"><option value="kari">कड़ी</option><option value="feet">फीट</option></select>
+                    <select id="satAreaUnitInput" style="padding:0px 2px; font-size:9px; flex:1; height:18px; border:1px solid #cbd5e1; border-radius:3px;" onchange="redrawAllSatDrawings()"><option value="decimal">डिसमिल</option><option value="acre">एकड़</option><option value="sqmt">वर्गमी</option></select>
+                </div>
+                
+                <div style="margin-bottom:3px;">
+                    <input type="file" id="satMapImage" accept="image/png, image/jpeg, application/pdf" onchange="processFile(event, 'sat')" style="font-size:9px; padding:1px; width:100%; box-sizing:border-box; background:#f8fafc; border:1px solid #cbd5e1; border-radius:3px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:2px; margin-bottom:2px;">
+                    <label style="font-size:9px; font-weight:bold; color:#dc2626; margin:0;">ओपे:</label>
+                    <input type="range" id="opacitySlider" min="0" max="100" value="60" oninput="changeOpacity(this.value)" style="flex:1; margin:0; height:10px;" title="पारदर्शिता">
+                </div>
+
+                <div id="georefLoadingMsg" class="loadingMsg" style="font-size:9px; margin-top:2px;">⚙️ लोडिंग...</div>
+                
+                <div id="georefControls" style="display:none; margin-top:3px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
+                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0;" onclick="addRefPair()">➕ पॉइंट</button>
+                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0; background:#059669;" onclick="alignMap()">🚀 अलाइन</button>
+                        <button class="export-btn" style="font-size:9px; padding:2px; margin:0;" onclick="exportKMZ()">📥 KMZ</button>
+                        <button class="danger-btn" style="font-size:9px; padding:2px; margin:0;" onclick="clearRefPairs()">हटाएँ</button>
+                    </div>
+                    <button class="danger-btn" style="font-size:9px; padding:2px; margin:2px 0 0 0; width:100%;" onclick="deleteGeorefMap()">नक्शा साफ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. नक्शा मिलान (OVERLAP RS/SS) TAB -->
+    <div id="overlap-tab" class="tab-content">
+        <div class="map-wrapper">
+            <div id="overlapMap" style="height: 98vh; background:#ffffff;"></div>
+            <button class="floating-home-btn" onclick="openHome()">🏠 होम</button>
+            <div class="floating-toolbar">
+                <button class="toggle-ribbon-btn" onclick="toggleRibbon(this)">🛠️ मेनू</button>
+                <div class="ribbon-tools">
+                    <div style="background:rgba(255,255,255,0.6); padding:4px; border-radius:4px; margin-bottom:2px; border:1px solid rgba(0,0,0,0.1);">
+                        <label style="font-size:10px; font-weight:bold; color:#dc2626; display:block; text-align:center; margin-bottom:2px;">लाल ओपेसिटी</label>
+                        <input type="range" id="overlapOpacity" min="0" max="100" value="70" oninput="changeOverlapOpacity(this.value)" style="width:100%;">
+                    </div>
+                    <button style="background:#4f46e5;" onclick="downloadPDF()">📥 PDF</button>
+                    <button style="background:#dc2626;" onclick="clearOverlapMap()">🗑️ साफ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS Libraries -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/IvanSanchez/Leaflet.ImageOverlay.Rotated/Leaflet.ImageOverlay.Rotated.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script> pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; </script>
+<!-- HTML2PDF Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    // --- HOME & TAB NAVIGATION ---
+    function openHome() {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('home-dashboard').style.display = 'block';
+    }
+
+    function openTab(tabId) {
+        document.getElementById('home-dashboard').style.display = 'none';
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active'); 
+        
+        if(tabId === 'map-tab' && map) setTimeout(() => { map.invalidateSize(); }, 200);
+        if(tabId === 'scalemap-tab' && scaleMap) setTimeout(() => { scaleMap.invalidateSize(); }, 200);
+        if(tabId === 'overlap-tab' && overlapMap) setTimeout(() => { overlapMap.invalidateSize(); }, 200);
+    }
+
+    function checkCustomLaggi(type) {
+        let selectEl = document.getElementById(type === 'Area' ? 'laggiArea' : 'laggiConv');
+        let customDiv = document.getElementById(type === 'Area' ? 'customLaggiDivArea' : 'customLaggiDivConv');
+        if(selectEl.value === 'custom') {
+            customDiv.style.display = 'block';
+        } else {
+            customDiv.style.display = 'none';
+        }
+    }
+
+    function getSelectedLaggi(type) {
+        let selectEl = document.getElementById(type === 'Area' ? 'laggiArea' : 'laggiConv');
+        if(selectEl.value === 'custom') {
+            let customVal = parseFloat(document.getElementById(type === 'Area' ? 'customLaggiInputArea' : 'customLaggiInputConv').value);
+            return (isNaN(customVal) || customVal <= 0) ? 6.5 : customVal;
+        }
+        return parseFloat(selectEl.value);
+    }
+
+    // --- SHAPE & CONVERTER MODE TOGGLES ---
+    function toggleShape() {
+        let shape = document.querySelector('input[name="shape"]:checked').value;
+        let divL2 = document.getElementById('divL2');
+        let divW2 = document.getElementById('divW2');
+        let lblL1 = document.getElementById('lblL1');
+        let lblW1 = document.getElementById('lblW1');
+
+        if (shape === '2') {
+            divL2.style.display = 'none';
+            divW2.style.display = 'none';
+            lblL1.innerText = "लंबाई:";
+            lblW1.innerText = "चौड़ाई:";
+        } else if (shape === '3') {
+            divL2.style.display = 'block';
+            divW2.style.display = 'none';
+            lblL1.innerText = "भुजा 1:";
+            lblL2.innerText = "भुजा 2:";
+            lblW1.innerText = "आधार (Base):";
+        } else if (shape === '4') {
+            divL2.style.display = 'block';
+            divW2.style.display = 'block';
+            lblL1.innerText = "लंबाई 1:";
+            lblL2.innerText = "लंबाई 2 (सामने):";
+            lblW1.innerText = "चौड़ाई 1:";
+            lblW2.innerText = "चौड़ाई 2 (सामने):";
+        }
+    }
+
+    function toggleConvType() {
+        let convType = document.querySelector('input[name="convType"]:checked').value;
+        document.getElementById('decInputSection').style.display = (convType === 'decToBkd' || convType === 'decToSqft') ? 'block' : 'none';
+        document.getElementById('bkdInputSection').style.display = (convType === 'bkdToDec') ? 'block' : 'none';
+        document.getElementById('sqftInputSection').style.display = (convType === 'sqftToDec' || convType === 'sqftToKattha') ? 'block' : 'none';
+        document.getElementById('katthaOnlyInputSection').style.display = (convType === 'katthaToSqft') ? 'block' : 'none';
+    }
+
+    // --- CALCULATE AREA & CONVERT LOGIC ---
+    function calculateArea() {
+        let unit = document.querySelector('input[name="unit"]:checked').value;
+        let shape = document.querySelector('input[name="shape"]:checked').value;
+        
+        let l1 = parseFloat(document.getElementById('l1').value) || 0;
+        let l2 = parseFloat(document.getElementById('l2').value) || 0;
+        let w1 = parseFloat(document.getElementById('w1').value) || 0;
+        let w2 = parseFloat(document.getElementById('w2').value) || 0;
+
+        let totalSqFt = 0;
+        let unitText = (unit === 'kari') ? 'वर्ग कड़ी' : 'वर्ग फीट';
+
+        if (shape === '2') {
+            let area = l1 * w1;
+            totalSqFt = (unit === 'kari') ? area * 0.4356 : area;
+        } else if (shape === '3') {
+            if (l2 === 0) { 
+                let s = (l1 + w1 + w1) / 2; 
+                let area = Math.sqrt(Math.max(0, s * (s - l1) * (s - w1) * (s - w1)));
+                totalSqFt = (unit === 'kari') ? area * 0.4356 : area;
+            } else {
+                let s = (l1 + l2 + w1) / 2;
+                let area = Math.sqrt(Math.max(0, s * (s - l1) * (s - l2) * (s - w1)));
+                totalSqFt = (unit === 'kari') ? area * 0.4356 : area;
+            }
+        } else if (shape === '4') {
+            let avgL = (l1 + (l2 || l1)) / 2;
+            let avgW = (w1 + (w2 || w1)) / 2;
+            let area = avgL * avgW;
+            totalSqFt = (unit === 'kari') ? area * 0.4356 : area;
+        }
+
+        let dismil = totalSqFt / 435.6;
+        
+        let haath = getSelectedLaggi('Area');
+        let laggiFeet = haath * 1.5;
+        let dhurSqFt = laggiFeet * laggiFeet;
+        let katthaSqFt = dhurSqFt * 20;
+        let bighaSqFt = katthaSqFt * 20;
+
+        let totalDhurs = totalSqFt / dhurSqFt;
+        let bigha = Math.floor(totalDhurs / 400);
+        let remDhurs = totalDhurs % 400;
+        let kattha = Math.floor(remDhurs / 20);
+        let dhur = remDhurs % 20;
+
+        document.getElementById('resTotalArea').innerText = totalSqFt.toFixed(2);
+        document.querySelector('.unit-text').innerText = unitText;
+        document.getElementById('decimalArea').innerText = `${dismil.toFixed(3)} डिसमिल`;
+        document.getElementById('traditionalUnitArea').innerText = `${bigha} बीघा, ${kattha} कट्ठा, ${dhur.toFixed(2)} धूर (${haath} हाथ लग्गी)`;
+        document.getElementById('resultBoxArea').style.display = 'block';
+    }
+
+    function convertUnit() {
+        let convType = document.querySelector('input[name="convType"]:checked').value;
+        let haath = getSelectedLaggi('Conv');
+        let laggiFeet = haath * 1.5;
+        let dhurSqFt = laggiFeet * laggiFeet;
+        let katthaSqFt = dhurSqFt * 20;
+        let bighaSqFt = katthaSqFt * 20;
+
+        let resText = "";
+
+        if (convType === 'decToBkd') {
+            let dec = parseFloat(document.getElementById('inputDecimal').value) || 0;
+            let sqft = dec * 435.6;
+            let totalDhurs = sqft / dhurSqFt;
+            let bigha = Math.floor(totalDhurs / 400);
+            let rem = totalDhurs % 400;
+            let kattha = Math.floor(rem / 20);
+            let dhur = rem % 20;
+            resText = `${dec} डिसमिल = ${bigha} बीघा, ${kattha} कट्ठा, ${dhur.toFixed(2)} धूर (लग्गी: ${haath} हाथ)`;
+        } else if (convType === 'bkdToDec') {
+            let b = parseFloat(document.getElementById('inputBigha').value) || 0;
+            let k = parseFloat(document.getElementById('inputKattha').value) || 0;
+            let d = parseFloat(document.getElementById('inputDhur').value) || 0;
+            let totalDhurs = (b * 400) + (k * 20) + d;
+            let sqft = totalDhurs * dhurSqFt;
+            let dec = sqft / 435.6;
+            resText = `${b} बीघा, ${k} कट्ठा, ${d} धूर = ${dec.toFixed(3)} डिसमिल (लग्गी: ${haath} हाथ)`;
+        } else if (convType === 'decToSqft') {
+            let dec = parseFloat(document.getElementById('inputDecimal').value) || 0;
+            let sqft = dec * 435.6;
+            resText = `${dec} डिसमिल = ${sqft.toFixed(2)} वर्ग फीट`;
+        } else if (convType === 'sqftToDec') {
+            let sqft = parseFloat(document.getElementById('inputSqft').value) || 0;
+            let dec = sqft / 435.6;
+            resText = `${sqft} वर्ग फीट = ${dec.toFixed(3)} डिसमिल`;
+        } else if (convType === 'katthaToSqft') {
+            let k = parseFloat(document.getElementById('inputKatthaOnly').value) || 0;
+            let sqft = k * katthaSqFt;
+            let dec = sqft / 435.6;
+            resText = `${k} कट्ठा = ${sqft.toFixed(2)} वर्ग फीट (${dec.toFixed(3)} डिसमिल, लग्गी: ${haath} हाथ)`;
+        } else if (convType === 'sqftToKattha') {
+            let sqft = parseFloat(document.getElementById('inputSqft').value) || 0;
+            let totalDhurs = sqft / dhurSqFt;
+            let kattha = totalDhurs / 20;
+            resText = `${sqft} वर्ग फीट = ${kattha.toFixed(2)} कट्ठा (लग्गी: ${haath} हाथ)`;
+        }
+
+        document.getElementById('convResultText').innerText = resText;
+    }
+
+    // --- SMART AUTO-HIDE RIBBON LOGIC ---
+    function forceHideRibbon(mapObj) {
+        let tabId = (mapObj === scaleMap) ? 'scalemap-tab' : ((mapObj === map) ? 'map-tab' : 'overlap-tab');
+        let tab = document.getElementById(tabId);
+        if(!tab) return;
+        let toggleBtn = tab.querySelector('.toggle-ribbon-btn');
+        let toolsDiv = tab.querySelector('.ribbon-tools');
+        if(toolsDiv && !toolsDiv.classList.contains('hidden')) {
+            toolsDiv.classList.add('hidden');
+            if(toggleBtn) toggleBtn.innerText = "🛠️ मेनू";
+        }
+    }
+
+    function toggleRibbon(btn) {
+        let toolsDiv = btn.nextElementSibling;
+        if (toolsDiv.classList.contains('hidden')) {
+            toolsDiv.classList.remove('hidden'); btn.innerText = "🛠️ मेनू";
+        } else {
+            toolsDiv.classList.add('hidden'); btn.innerText = "🛠️ मेनू";
+        }
+    }
+
+    // --- FLAWLESS FULL-FIT HD PDF EXPORT ---
+    function downloadPDF() {
+        alert("हाई-क्वालिटी HD PDF तैयार हो रहा है, कृपया 2 सेकंड प्रतीक्षा करें...");
+        
+        let activeTab = document.querySelector('.tab-content.active').id;
+        let activeMapObj = (activeTab === 'scalemap-tab') ? scaleMap : ((activeTab === 'map-tab') ? map : overlapMap);
+
+        let wrapperElement = activeMapObj.getContainer().closest('.map-wrapper');
+        activeMapObj.invalidateSize(true);
+
+        let rect = wrapperElement.getBoundingClientRect();
+        let isLandscape = rect.width >= rect.height;
+
+        let opt = {
+            margin:       5,
+            filename:     'Ashwinis_Survey_Report_HD.pdf',
+            image:        { type: 'jpeg', quality: 1.0 },
+            html2canvas:  { scale: 3, useCORS: true, logging: false, scrollX: 0, scrollY: 0 }, 
+            jsPDF:        { unit: 'mm', format: 'a3', orientation: isLandscape ? 'landscape' : 'portrait' } 
+        };
+
+        setTimeout(() => {
+            html2pdf().set(opt).from(wrapperElement).save().then(() => {
+                alert("✅ PDF सफलतापूर्वक सेव हो गई है!");
+            }).catch(err => {
+                alert("❌ PDF सेव करने में समस्या हुई।");
+            });
+        }, 500);
+    }
+
+    function formatDecimalArea(dec) {
+        if (dec >= 100) { let acre = Math.floor(dec / 100); let remDec = dec % 100; return `${acre} एकड़ ${remDec.toFixed(3)} डिसमिल`; }
+        return `${dec.toFixed(3)} डिसमिल`;
+    }
+
+    function toggleSatFloatingPanel() { document.getElementById('satFloatingPanel').classList.toggle('active'); }
+
+    function createPinIcon(num, color) {
+        let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="52" viewBox="0 0 36 52"><path d="M18 0 C 10 0 6 6 6 14 C 6 24 18 52 18 52 C 18 52 30 24 30 14 C 30 6 26 0 18 0 z" fill="${color}" stroke="#ffffff" stroke-width="2.5" opacity="0.95"/><text x="18" y="18" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">${num}</text></svg>`;
+        return L.icon({ iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), iconSize: [36, 52], iconAnchor: [18, 52], popupAnchor: [0, -45] });
+    }
+
+    function createSimplePin(color) {
+        let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="44" viewBox="0 0 36 52"><path d="M18 0 C 10 0 6 6 6 14 C 6 24 18 52 18 52 C 18 52 30 24 30 14 C 30 6 26 0 18 0 z" fill="${color}" stroke="#ffffff" stroke-width="2.5" opacity="0.95"/><circle cx="18" cy="14" r="5" fill="#ffffff"/></svg>`;
+        return L.icon({ iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), iconSize: [30, 44], iconAnchor: [15, 44] });
+    }
+
+    // ================= MAP INITIALIZATION (SATELLITE USING GOOGLE HYBRID) =================
+    let scaleMap = L.map('scaleMap', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 4 });
+    let map = L.map('map').setView([25.5941, 85.1376], 12); 
+    L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22, attribution: 'Google' }).addTo(map);
+
+    let scaleImageLayer = null; let scaleImageBase64 = ""; 
+    let scaleDrawnItems = new L.FeatureGroup().addTo(scaleMap); 
+    let satDrawnItems = new L.FeatureGroup().addTo(map);
+
+    L.LatLng.prototype.distanceTo = function (other) { return scaleMap.options.crs === L.CRS.Simple ? Math.sqrt(Math.pow(other.lng - this.lng, 2) + Math.pow(other.lat - this.lat, 2)) : L.CRS.EPSG3857.distance(this, L.latLng(other)); };
+
+    let calibState = 0; let pixelsPerFoot = null; let calibMarkers = []; let calibLine = null; let cPt1, cPt2;
+
+    function setupScaleImage(base64Url) {
+        if (scaleImageLayer) { scaleMap.removeLayer(scaleImageLayer); scaleImageLayer = null; }
+        clearDrawings(scaleMap, scaleDrawnItems); pixelsPerFoot = null; calibState = 0;
+        let statusEl = document.getElementById('scaleStatus'); if(statusEl) statusEl.style.display = 'none';
+        let btnEl = document.getElementById('calibBtn'); if(btnEl) { btnEl.innerText = "📏 1. स्केल सेट करें"; btnEl.style.background = "#059669"; }
+        scaleImageBase64 = base64Url;
+        let img = new Image(); img.onload = function() {
+            let bounds = [[0, 0], [img.height, img.width]]; scaleImageLayer = L.imageOverlay(scaleImageBase64, bounds).addTo(scaleMap); scaleMap.fitBounds(bounds);
+        }; img.src = scaleImageBase64;
+    }
+
+    function handleCalibFlow() {
+        let btn = document.getElementById('calibBtn');
+        if(calibState === 0) {
+            if(!scaleImageLayer) return alert("पहले नक्शा अपलोड करें।");
+            calibState = 1; calibMarkers.forEach(m => scaleMap.removeLayer(m)); if(calibLine) scaleMap.removeLayer(calibLine);
+            calibMarkers = []; calibLine = null; btn.innerText = "📍 1. नक्शे पर कहीं छुएं"; btn.style.background = "#ea580c";
+        } else if (calibState === 2) {
+            calibMarkers[0].dragging.disable(); calibState = 3; btn.innerText = "📍 2. नक्शे पर दूसरा पॉइंट छुएं"; btn.style.background = "#ea580c";
+        } else if (calibState === 4) { calibMarkers[1].dragging.disable(); promptDistance(); }
+    }
+
+    scaleMap.on('click', function(e) {
+        let btn = document.getElementById('calibBtn');
+        if (calibState === 1) {
+            cPt1 = e.latlng; let m = L.marker(cPt1, {draggable: true, icon: createPinIcon(1, '#ef4444')}).addTo(scaleMap);
+            calibMarkers.push(m); m.on('drag', function(ev){ cPt1 = ev.target.getLatLng(); updateCalibLine(); });
+            calibState = 2; btn.innerText = "✅ पहला पॉइंट OK करें"; btn.style.background = "#2563eb";
+        } else if (calibState === 3) {
+            cPt2 = e.latlng; let m = L.marker(cPt2, {draggable: true, icon: createPinIcon(2, '#3b82f6')}).addTo(scaleMap);
+            calibMarkers.push(m); cLine = L.polyline([cPt1, cPt2], {color: '#dc2626', weight: 3, dashArray: '5,5'}).addTo(scaleMap);
+            m.on('drag', function(ev){ cPt2 = ev.target.getLatLng(); updateCalibLine(); });
+            calibState = 4; btn.innerText = "✅ दूसरा पॉइंट OK करें"; btn.style.background = "#2563eb";
+        }
+    });
+
+    function updateCalibLine() { if(cLine && cPt1 && cPt2) cLine.setLatLngs([cPt1, cPt2]); }
+
+    function promptDistance() {
+        let inputUnit = document.getElementById('scaleUnitInput').value; let unitName = (inputUnit === 'kari') ? "कड़ी" : "फीट";
+        setTimeout(() => {
+            let actualDist = prompt(`इन दोनों पॉइंट्स के बीच की असली दूरी दर्ज करें (${unitName} में):`);
+            if(!actualDist || isNaN(actualDist) || actualDist <= 0) { alert("अमान्य इनपुट! कैलिब्रेशन रद्द।"); resetCalibGraphics(); return; }
+            let distInFeet = parseFloat(actualDist); if(inputUnit === 'kari') distInFeet *= 0.66; 
+            
+            let p1 = scaleMap.project(cPt1, scaleMap.getMaxZoom()); let p2 = scaleMap.project(cPt2, scaleMap.getMaxZoom());
+            let pixelDist = p1.distanceTo(p2); pixelsPerFoot = pixelDist / distInFeet;
+            
+            let statusEl = document.getElementById('scaleStatus'); if(statusEl) statusEl.style.display = 'block';
+            resetCalibGraphics(); let btnEl = document.getElementById('calibBtn'); if(btnEl) { btnEl.innerText = "🔄 स्केल दोबारा बदलें"; btnEl.style.background = "#475569"; }
+        }, 100);
+    }
+
+    function resetCalibGraphics() {
+        calibMarkers.forEach(m => scaleMap.removeLayer(m)); if(calibLine) scaleMap.removeLayer(calibLine);
+        calibMarkers = []; calibLine = null; calibState = 0;
+        let btnEl = document.getElementById('calibBtn');
+        if(!pixelsPerFoot && btnEl) { btnEl.innerHTML = "📏 1. स्केल सेट करें"; btnEl.style.background = "#059669"; }
+    }
+
+    // ================= MODE MANAGERS (COLOR, EDIT, SPLIT) =================
+    let stepDrawType = null; let stepDrawMap = null; let stepDrawnItemsGroup = null;
+    let stepCurrentPoints = []; let stepCurrentMarkers = []; let stepTempLine = null;
+    
+    let isSplittingMode = false; let activeSplitMap = null; let activeSplitGroup = null;
+    let isEditingMode = false; let activeEditMap = null; let activeEditGroup = null; let editVertexMarkers = [];
+    let isColoringMode = false; let activeColorMap = null; let activeColorGroup = null; let activeColorPickerId = null;
+
+    let colorsList = ['#059669', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+    function disableAllModes(mapObj) {
+        if(isSplittingMode) deactivateSplitMode(mapObj); if(isEditingMode) finishEditing();
+        if(isColoringMode) deactivateColorMode(mapObj); if(stepDrawType) clearStepTemp();
+    }
+
+    function toggleColorMode(mapObj, drawnGroup, colorPickerId) {
+        if(isColoringMode) { deactivateColorMode(mapObj); return; } 
+        disableAllModes(mapObj); forceHideRibbon(mapObj); 
+        isColoringMode = true; activeColorMap = mapObj; activeColorGroup = drawnGroup; activeColorPickerId = colorPickerId;
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) { statusEl.innerText = "🎨 रंग बदलें: किसी भी प्लॉट या लाइन पर क्लिक करें।"; statusEl.style.display = 'block'; statusEl.style.background = "#db2777"; }
+    }
+
+    function deactivateColorMode(mapObj) {
+        isColoringMode = false; activeColorMap = null; activeColorGroup = null; activeColorPickerId = null;
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) statusEl.style.display = 'none';
+    }
+
+    function executeColorChange(layer, mapObj, drawnGroup) {
+        let newColor = document.getElementById(activeColorPickerId).value;
+        layer.setStyle({ color: newColor }); layer.options.color = newColor; 
+        if(!layer.feature) layer.feature = { type: 'Feature', properties: {} };
+        layer.feature.properties.color = newColor; 
+        addLabelsToLayer(layer, mapObj, mapObj === scaleMap ? pixelsPerFoot : 1);
+    }
+
+    function startStepDraw(type, mapObj, drawnGroup) {
+        if(mapObj === scaleMap && !pixelsPerFoot) return alert("⚠️ पहले 'स्केल सेट करें' बटन से स्केल सेट करें!");
+        disableAllModes(mapObj); forceHideRibbon(mapObj); 
+        
+        stepDrawMap = mapObj; stepDrawnItemsGroup = drawnGroup; stepDrawType = type; stepCurrentPoints = [];
+
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        let okBtn = (mapObj === scaleMap) ? document.getElementById('pointOkBtn') : document.getElementById('satPointOkBtn');
+        let backBtn = (mapObj === scaleMap) ? document.getElementById('pointBackBtn') : document.getElementById('satPointBackBtn');
+        let finishBtn = (mapObj === scaleMap) ? document.getElementById('finishDrawBtn') : document.getElementById('satFinishDrawBtn');
+
+        if(statusEl) { statusEl.innerText = "📍 नक्शे पर क्लिक करें, लट्टू को सही जगह खींचकर 'पॉइंट OK' दबाएँ।"; statusEl.style.display = 'block'; statusEl.style.background = "rgba(0,0,0,0.8)"; }
+        if(okBtn) okBtn.style.display = 'block'; 
+        if(backBtn) backBtn.style.display = 'block';
+        if(finishBtn) finishBtn.style.display = 'none';
+
+        stepDrawMap.on('click', onMapClickForStep);
+    }
+
+    let tempClickLatLng = null; let currentTempMarker = null;
+
+    function onMapClickForStep(e) {
+        if(isSplittingMode || isEditingMode || isColoringMode) return;
+        tempClickLatLng = e.latlng;
+        if(currentTempMarker) stepDrawMap.removeLayer(currentTempMarker);
+        currentTempMarker = L.marker(tempClickLatLng, {draggable: true, icon: createSimplePin('#2563eb')}).addTo(stepDrawMap);
+        currentTempMarker.on('drag', (ev) => { tempClickLatLng = ev.target.getLatLng(); });
+    }
+
+    function confirmStepPoint() {
+        if(!tempClickLatLng) return alert("पहले नक्शे पर कहीं क्लिक करके पॉइंट चुनें!");
+        stepCurrentPoints.push(tempClickLatLng); stepCurrentMarkers.push(currentTempMarker);
+        currentTempMarker = null; tempClickLatLng = null; updateStepTempGeometry();
+
+        let finishBtn = (stepDrawMap === scaleMap) ? document.getElementById('finishDrawBtn') : document.getElementById('satFinishDrawBtn');
+        if(stepCurrentPoints.length >= 2 && finishBtn) finishBtn.style.display = 'block';
+
+        let statusEl = (stepDrawMap === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) statusEl.innerText = `✅ ${stepCurrentPoints.length} पॉइंट जुड़ गए। अगला पॉइंट चुनें या 'सेव' दबाएं।`;
+    }
+
+    function undoLastPoint() {
+        if(stepCurrentPoints.length === 0) return alert("हटाने के लिए कोई पॉइंट नहीं बचा है!");
+        let lastMarker = stepCurrentMarkers.pop();
+        if(lastMarker && stepDrawMap) stepDrawMap.removeLayer(lastMarker);
+        stepCurrentPoints.pop();
+        updateStepTempGeometry();
+
+        let finishBtn = (stepDrawMap === scaleMap) ? document.getElementById('finishDrawBtn') : document.getElementById('satFinishDrawBtn');
+        if(stepCurrentPoints.length < 2 && finishBtn) finishBtn.style.display = 'none';
+
+        let statusEl = (stepDrawMap === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) statusEl.innerText = `↩️ आखिरी पॉइंट हटा दिया गया। अब ${stepCurrentPoints.length} पॉइंट्स बचे हैं।`;
+    }
+
+    function updateStepTempGeometry() {
+        if(stepTempLine) stepDrawMap.removeLayer(stepTempLine);
+        if(stepCurrentPoints.length < 2) return;
+        let pts = [...stepCurrentPoints]; if(stepDrawType === 'polygon' && pts.length > 2) pts.push(pts[0]);
+        stepTempLine = L.polyline(pts, {color: '#059669', weight: 3, dashArray: '4,4'}).addTo(stepDrawMap);
+    }
+
+    function clearStepTemp() {
+        if(scaleMap) scaleMap.off('click', onMapClickForStep); if(map) map.off('click', onMapClickForStep);
+        if(currentTempMarker && stepDrawMap) stepDrawMap.removeLayer(currentTempMarker);
+        stepCurrentMarkers.forEach(m => { if(stepDrawMap) stepDrawMap.removeLayer(m); });
+        if(stepTempLine && stepDrawMap) stepDrawMap.removeLayer(stepTempLine);
+        currentTempMarker = null; tempClickLatLng = null; stepCurrentMarkers = []; stepTempLine = null;
+
+        ['customDrawStatus','pointOkBtn','pointBackBtn','finishDrawBtn','satDrawStatus','satPointOkBtn','satPointBackBtn','satFinishDrawBtn'].forEach(id => {
+            let el = document.getElementById(id); if(el) el.style.display = 'none';
+        });
+    }
+
+    function finishStepDraw(mapObj, drawnGroup, colorPickerId) {
+        if(stepCurrentPoints.length < 2) return alert("कम से कम 2 पॉइंट्स चाहिए!");
+        if(stepDrawType === 'polygon' && stepCurrentPoints.length < 3) return alert("प्लॉट बनाने के लिए कम से कम 3 पॉइंट्स चाहिए!");
+        
+        let finalLayer; let selectedColor = document.getElementById(colorPickerId).value || '#059669';
+        if(stepDrawType === 'polygon') finalLayer = L.polygon(stepCurrentPoints, {color: selectedColor, weight: 3, fillOpacity: 0.15});
+        else finalLayer = L.polyline(stepCurrentPoints, {color: selectedColor, weight: 3});
+
+        finalLayer.options.color = selectedColor; finalLayer.feature = { type: 'Feature', properties: { color: selectedColor, type: stepDrawType } };
+
+        drawnGroup.addLayer(finalLayer); addLabelsToLayer(finalLayer, mapObj, (mapObj===scaleMap ? pixelsPerFoot : 1));
+        
+        finalLayer.on('click', function() { 
+            if(isSplittingMode) executePolygonSplit(this, mapObj, drawnGroup); 
+            else if(isColoringMode) executeColorChange(this, mapObj, drawnGroup);
+        });
+        clearStepTemp(); stepDrawType = null;
+    }
+
+    function toggleEditMode(mapObj, drawnGroup) {
+        if(isEditingMode) { finishEditing(); return; }
+        if(mapObj === scaleMap && !pixelsPerFoot) return alert("⚠️ पहले 'स्केल सेट करें' बटन से स्केल सेट करें!");
+        disableAllModes(mapObj); forceHideRibbon(mapObj); 
+
+        isEditingMode = true; activeEditMap = mapObj; activeEditGroup = drawnGroup;
+
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) { statusEl.innerText = "✏️ एडिट: पॉइंट खिसकाएं या हटाने के लिए उस पर क्लिक करें।"; statusEl.style.display = 'block'; statusEl.style.background = "#d97706"; }
+        
+        let saveBtn = (mapObj === scaleMap) ? document.getElementById('finishEditBtn') : document.getElementById('satFinishEditBtn');
+        if(saveBtn) saveBtn.style.display = 'block';
+
+        drawnGroup.eachLayer(layer => { if (layer instanceof L.Polygon || layer instanceof L.Polyline) makeLayerEditable(layer, mapObj); });
+    }
+
+    function makeLayerEditable(layer, mapObj) {
+        let isPolygon = layer instanceof L.Polygon; let latlngsArray = layer.getLatLngs(); let latlngs = isPolygon ? latlngsArray[0] : latlngsArray;
+        
+        latlngs.forEach((latlng, idx) => {
+            let m = L.marker(latlng, {draggable: true, icon: createSimplePin('#d97706')}).addTo(mapObj); editVertexMarkers.push(m);
+
+            m.on('drag', function(e) {
+                latlngs[idx] = e.target.getLatLng();
+                if(isPolygon) layer.setLatLngs([latlngs]); else layer.setLatLngs(latlngs);
+                addLabelsToLayer(layer, mapObj, mapObj === scaleMap ? pixelsPerFoot : 1);
+            });
+
+            m.on('click', function() {
+                if(confirm("क्या आप इस पॉइंट को हटाना चाहते हैं?")) {
+                    if (latlngs.length <= (isPolygon ? 3 : 2)) { alert("इससे कम पॉइंट नहीं हो सकते।"); return; }
+                    latlngs.splice(idx, 1);
+                    if(isPolygon) layer.setLatLngs([latlngs]); else layer.setLatLngs(latlngs);
+                    addLabelsToLayer(layer, mapObj, mapObj === scaleMap ? pixelsPerFoot : 1);
+                    let currentMap = activeEditMap; let currentGroup = activeEditGroup;
+                    finishEditing(); toggleEditMode(currentMap, currentGroup);
+                }
+            });
+        });
+    }
+
+    function finishEditing() {
+        if(!isEditingMode) return;
+        editVertexMarkers.forEach(m => { if(activeEditMap) activeEditMap.removeLayer(m); });
+        editVertexMarkers = []; isEditingMode = false;
+        let statusEl = (activeEditMap === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) statusEl.style.display = 'none';
+        let saveBtn = (activeEditMap === scaleMap) ? document.getElementById('finishEditBtn') : document.getElementById('satFinishEditBtn');
+        if(saveBtn) saveBtn.style.display = 'none';
+        activeEditMap = null; activeEditGroup = null;
+    }
+
+    function getPlanarAreaForSplit(feat) {
+        if (!feat || !feat.geometry) return 0;
+        let area = 0; let polys = [];
+        if (feat.geometry.type === 'Polygon') polys = [feat.geometry.coordinates];
+        else if (feat.geometry.type === 'MultiPolygon') polys = feat.geometry.coordinates; else return 0;
+        polys.forEach(poly => {
+            let coords = poly[0]; let a = 0;
+            for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) { a += (coords[j][0] + coords[i][0]) * (coords[j][1] - coords[i][1]); }
+            area += Math.abs(a / 2);
+        }); return area;
+    }
+
+    function activateSplitMode(mapObj, drawnGroup) {
+        if(mapObj === scaleMap && !pixelsPerFoot) return alert("⚠️ पहले 'स्केल सेट करें' बटन से स्केल सेट करें!");
+        disableAllModes(mapObj); forceHideRibbon(mapObj); 
+        
+        isSplittingMode = true; activeSplitMap = mapObj; activeSplitGroup = drawnGroup;
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) { statusEl.innerText = "✂️ स्प्लिट: उस 'प्लॉट' पर क्लिक करें जिसे बाँटना है।"; statusEl.style.display = 'block'; statusEl.style.background = "#8b5cf6"; }
+        let mapEl = document.getElementById(mapObj === scaleMap ? 'scaleMap' : 'map'); if(mapEl) mapEl.classList.add('split-active');
+    }
+
+    function deactivateSplitMode(mapObj) {
+        isSplittingMode = false; activeSplitMap = null; activeSplitGroup = null;
+        let statusEl = (mapObj === scaleMap) ? document.getElementById('customDrawStatus') : document.getElementById('satDrawStatus');
+        if(statusEl) statusEl.style.display = 'none';
+        let mapEl = document.getElementById(mapObj === scaleMap ? 'scaleMap' : 'map'); if(mapEl) mapEl.classList.remove('split-active');
+    }
+
+    function executePolygonSplit(layer, mapObj, drawnGroup) {
+        if(!(layer instanceof L.Polygon)) { alert("केवल प्लॉट को बाँटा जा सकता है।"); return; }
+        let partsStr = prompt("इस प्लॉट को कितने बराबर हिस्सों में बाँटना है? (2 से 6 के बीच):", "2");
+        if(!partsStr) { deactivateSplitMode(mapObj); return; }
+        let parts = parseInt(partsStr); if(isNaN(parts) || parts < 2 || parts > 6) { alert("अमान्य नंबर!"); deactivateSplitMode(mapObj); return; }
+
+        let cutStyle = prompt("कटाई का तरीका चुनें:\n1 = लंबवत (Perpendicular)\n2 = समानांतर (Parallel)", "1");
+        if(cutStyle !== "1" && cutStyle !== "2") { deactivateSplitMode(mapObj); return; }
+
+        try {
+            let geojson = layer.toGeoJSON(); let coords = geojson.geometry.coordinates[0];
+            if(coords[0][0] !== coords[coords.length-1][0] || coords[0][1] !== coords[coords.length-1][1]) coords.push([...coords[0]]);
+            let maxDist = 0; let baseAngle = 0;
+            for(let i=0; i<coords.length-1; i++) {
+                let dx = coords[i+1][0] - coords[i][0]; let dy = coords[i+1][1] - coords[i][1];
+                let dist = dx*dx + dy*dy; if(dist > maxDist) { maxDist = dist; baseAngle = Math.atan2(dy, dx) * (180 / Math.PI); }
+            }
+
+            let rotatePoly = (g, angle, piv) => {
+                let cloned = JSON.parse(JSON.stringify(g)); let rad = angle * (Math.PI / 180); let cos = Math.cos(rad), sin = Math.sin(rad);
+                turf.coordEach(cloned, function(coord) {
+                    let x = coord[0] - piv[0], y = coord[1] - piv[1]; coord[0] = piv[0] + (x * cos - y * sin); coord[1] = piv[1] + (x * sin + y * cos);
+                }); return cloned;
+            };
+
+            let bbox = turf.bbox(geojson); let pivot = [(bbox[0] + bbox[2])/2, (bbox[1] + bbox[3])/2];
+            let rotatedPoly = rotatePoly(geojson, -baseAngle, pivot);
+            let totalArea = getPlanarAreaForSplit(rotatedPoly); let targetArea = totalArea / parts;
+            let remainingPoly = rotatedPoly; let splitFeatures = []; let BIG_BUF = 1000000; 
+
+            for(let i=1; i<parts; i++) {
+                let rBbox = turf.bbox(remainingPoly); let minX = rBbox[0], minY = rBbox[1], maxX = rBbox[2], maxY = rBbox[3];
+                let low, high; if (cutStyle === "1") { low = minX; high = maxX; } else { low = minY; high = maxY; } 
+                let bestCut = null;
+                for(let step=0; step<60; step++) {
+                    let mid = (low + high) / 2; let cutBox;
+                    if(cutStyle === "1") cutBox = turf.bboxPolygon([minX - BIG_BUF, minY - BIG_BUF, mid, maxY + BIG_BUF]);
+                    else cutBox = turf.bboxPolygon([minX - BIG_BUF, minY - BIG_BUF, maxX + BIG_BUF, mid]);
+
+                    let intersection; try { intersection = turf.intersect(remainingPoly, cutBox); } catch(e) {}
+                    if(!intersection) { low = mid; continue; }
+                    let currentArea = getPlanarAreaForSplit(intersection); bestCut = intersection;
+                    if(currentArea < targetArea) low = mid; else high = mid;
+                }
+
+                if(bestCut) {
+                    splitFeatures.push(bestCut); let diffBox;
+                    if(cutStyle === "1") diffBox = turf.bboxPolygon([minX - BIG_BUF, minY - BIG_BUF, (low+high)/2, maxY + BIG_BUF]);
+                    else diffBox = turf.bboxPolygon([minX - BIG_BUF, minY - BIG_BUF, maxX + BIG_BUF, (low+high)/2]);
+                    let diff; try { diff = turf.difference(remainingPoly, diffBox); } catch(e){}
+                    if(diff) remainingPoly = diff; else break;
+                } else break;
+            }
+            if(remainingPoly) splitFeatures.push(remainingPoly);
+            if(layer.edgeLabels) mapObj.removeLayer(layer.edgeLabels); drawnGroup.removeLayer(layer);
+
+            splitFeatures.forEach((feat, idx) => {
+                if(!feat || !feat.geometry || !feat.geometry.coordinates || feat.geometry.coordinates.length === 0) return;
+                let originalFeat = rotatePoly(feat, baseAngle, pivot);
+                if (turf.cleanCoords) originalFeat = turf.cleanCoords(originalFeat); 
+                let color = colorsList[idx % colorsList.length];
+                originalFeat.properties = { color: color, type: 'polygon' }; 
+                
+                let newLayer = L.geoJSON(originalFeat, { style: { color: color, weight: 3, fillOpacity: 0.2 } });
+                newLayer.eachLayer(l => {
+                    l.options.color = color; 
+                    drawnGroup.addLayer(l); addLabelsToLayer(l, mapObj, (mapObj===scaleMap ? pixelsPerFoot : 1));
+                    l.on('click', function() { 
+                        if(isSplittingMode) executePolygonSplit(this, mapObj, drawnGroup); 
+                        else if(isColoringMode) executeColorChange(this, mapObj, drawnGroup);
+                    });
+                });
+            }); alert(`✅ प्लॉट सफलतापूर्वक ${parts} बराबर हिस्सों में कट गया है!`);
+        } catch (e) { console.error(e); alert("❌ त्रुटि! कृपया लाइन टूल से इसे मैन्युअली बाँटें।"); }
+        deactivateSplitMode(mapObj);
+    }
+
+    function getCRSArea(latlngs) {
+        let area = 0, j = latlngs.length - 1;
+        for (let i=0; i<latlngs.length; i++) { area += (latlngs[j].lng + latlngs[i].lng) * (latlngs[i].lat - latlngs[j].lat); j = i; }
+        return Math.abs(area / 2);
+    }
+
+    function calculateGeodesicArea(latLngs) {
+        if (latLngs.length < 3) return 0;
+        let area = 0; let earthRadius = 6378137; let rad = Math.PI / 180;
+        for (let i = 0; i < latLngs.length; i++) {
+            let p1 = latLngs[i]; let p2 = latLngs[(i + 1) % latLngs.length];
+            area += (p2.lng * rad - p1.lng * rad) * (2 + Math.sin(p1.lat * rad) + Math.sin(p2.lat * rad));
+        } return Math.abs(area * earthRadius * earthRadius / 2) * 10.7639; 
+    }
+
+    function addLabelsToLayer(layer, mapObj, pFoot) {
+        if (layer.edgeLabels) mapObj.removeLayer(layer.edgeLabels);
+        layer.edgeLabels = L.featureGroup().addTo(mapObj);
+
+        let isScale = (mapObj === scaleMap);
+        let lenUnit = document.getElementById(isScale ? 'scaleUnitInput' : 'satUnitInput').value;
+        let areaUnit = document.getElementById(isScale ? 'areaUnitInput' : 'satAreaUnitInput').value;
+        
+        let borderColor = layer.options.color || '#0f172a';
+
+        if (layer instanceof L.Polygon) {
+            let latlngs = layer.getLatLngs()[0];
+            let sqFtArea = isScale ? (getCRSArea(latlngs) / (pFoot * pFoot)) : calculateGeodesicArea(latlngs);
+
+            let areaHTML = "";
+            if (areaUnit === 'decimal') areaHTML = formatDecimalArea(sqFtArea / 435.6);
+            else if (areaUnit === 'acre') areaHTML = `${((sqFtArea / 435.6) / 100).toFixed(3)} एकड़`;
+            else if (areaUnit === 'sqmt') areaHTML = `${(sqFtArea * 0.092903).toFixed(2)} वर्गमीटर`;
+
+            layer.bindTooltip(areaHTML, {permanent: true, direction: 'center', className: 'map-polygon-label'}).openTooltip();
+
+            for (let i = 0; i < latlngs.length; i++) {
+                let p1 = latlngs[i]; let p2 = latlngs[(i + 1) % latlngs.length];
+                let distFt = 0;
+                if (isScale) { let pt1Proj = scaleMap.project(p1, scaleMap.getMaxZoom()); let pt2Proj = scaleMap.project(p2, scaleMap.getMaxZoom()); distFt = pt1Proj.distanceTo(pt2Proj) / pFoot; } 
+                else { distFt = mapObj.distance(p1, p2) * 3.28084; }
+
+                let lenStr = (lenUnit === 'kari') ? `${(distFt/0.66).toFixed(1)} कड़ी` : `${distFt.toFixed(1)} फीट`;
+                let pt1 = mapObj.project(p1, mapObj.getZoom()); let pt2 = mapObj.project(p2, mapObj.getZoom());
+                let angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x) * (180 / Math.PI); if(angle > 90 || angle < -90) angle += 180;
+                let midPt = L.latLng((p1.lat + p2.lat) / 2, (p1.lng + p2.lng) / 2);
+                let edgeHTML = `<div style="position:absolute; transform: translate(-50%, -50%) rotate(${angle}deg);"><div class="edge-label-box" style="border-color:${borderColor}; color:${borderColor};">${lenStr}</div></div>`;
+                layer.edgeLabels.addLayer(L.marker(midPt, { icon: L.divIcon({ className: 'edge-label-container', html: edgeHTML, iconSize: [0, 0] }), interactive: false }));
+            }
+        } else if (layer instanceof L.Polyline) {
+            let latlngs = layer.getLatLngs();
+            for (let i = 0; i < latlngs.length - 1; i++) {
+                let p1 = latlngs[i]; let p2 = latlngs[i + 1];
+                let distFt = 0;
+                if (isScale) { let pt1Proj = scaleMap.project(p1, scaleMap.getMaxZoom()); let pt2Proj = scaleMap.project(p2, scaleMap.getMaxZoom()); distFt = pt1Proj.distanceTo(pt2Proj) / pFoot; } 
+                else { distFt = mapObj.distance(p1, p2) * 3.28084; }
+
+                let lenStr = (lenUnit === 'kari') ? `${(distFt/0.66).toFixed(1)} कड़ी` : `${distFt.toFixed(1)} फीट`;
+                let pt1 = mapObj.project(p1, mapObj.getZoom()); let pt2 = mapObj.project(p2, mapObj.getZoom());
+                let angle = Math.atan2(pt2.y - pt1.y, pt2.x - pt1.x) * (180 / Math.PI); if(angle > 90 || angle < -90) angle += 180;
+                let midPt = L.latLng((p1.lat + p2.lat) / 2, (p1.lng + p2.lng) / 2);
+                let edgeHTML = `<div style="position:absolute; transform: translate(-50%, -50%) rotate(${angle}deg);"><div class="edge-label-box" style="border-color:${borderColor}; color:${borderColor};">${lenStr}</div></div>`;
+                layer.edgeLabels.addLayer(L.marker(midPt, { icon: L.divIcon({ className: 'edge-label-container', html: edgeHTML, iconSize: [0, 0] }), interactive: false }));
+            }
+        }
+    }
+
+    function redrawAllCustomDrawings() { scaleDrawnItems.eachLayer(l => addLabelsToLayer(l, scaleMap, pixelsPerFoot)); }
+    function redrawAllSatDrawings() { satDrawnItems.eachLayer(l => addLabelsToLayer(l, map, 1)); }
+
+    function clearDrawings(mapObj, drawnGroup) {
+        drawnGroup.eachLayer(l => { if(l.edgeLabels) mapObj.removeLayer(l.edgeLabels); });
+        drawnGroup.clearLayers(); clearStepTemp(); disableAllModes(mapObj);
+    }
+
+    // ================= FILE PROCESSING FOR SCALE AND SAT =================
+    async function processFile(event, targetType) {
+        let file = event.target.files[0]; if (!file) return;
+        let loadingEl = (targetType === 'scale') ? document.getElementById('scaleLoadingMsg') : document.getElementById('georefLoadingMsg');
+        if(loadingEl) loadingEl.style.display = 'block';
+
+        try {
+            if (file.type === 'application/pdf') {
+                let fileReader = new FileReader();
+                fileReader.onload = async function(e) {
+                    try {
+                        let pdf = await pdfjsLib.getDocument({data: new Uint8Array(e.target.result)}).promise;
+                        let page = await pdf.getPage(1); 
+                        
+                        let baseVp = page.getViewport({ scale: 1 });
+                        let dynamicScale = Math.min(4.0, 6000 / Math.max(baseVp.width, baseVp.height));
+                        let viewport = page.getViewport({ scale: dynamicScale }); 
+                        
+                        let canvas = document.createElement('canvas'); let ctx = canvas.getContext('2d');
+                        canvas.height = viewport.height; canvas.width = viewport.width;
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        
+                        if(loadingEl) loadingEl.style.display = 'none'; 
+                        let base64 = canvas.toDataURL('image/png');
+                        if(targetType === 'scale') setupScaleImage(base64); else setupGeorefImage(base64, "png");
+                    } catch(err) { if(loadingEl) loadingEl.style.display = 'none'; alert("PDF Error: " + err.message); }
+                }; fileReader.readAsArrayBuffer(file);
+            } else {
+                let reader = new FileReader(); reader.onload = function(e) {
+                    if(loadingEl) loadingEl.style.display = 'none'; let ext = file.name.split('.').pop().toLowerCase();
+                    if(targetType === 'scale') setupScaleImage(e.target.result); else setupGeorefImage(e.target.result, ext);
+                }; reader.readAsDataURL(file);
+            }
+        } catch(e) { if(loadingEl) loadingEl.style.display = 'none'; alert("Error: " + e.message); }
+    }
+
+    // ================= SATELLITE SEARCH, LIVE LOCATION & GEOREF =================
+    function searchLocation() { let query = document.getElementById('searchPlace').value; if (!query) return; fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`).then(res => res.json()).then(data => { if (data.length > 0) map.setView([data[0].lat, data[0].lon], 16); }); }
+
+    function goToLiveLocation() {
+        if (!navigator.geolocation) { alert("आपका ब्राउज़र Geolocation सपोर्ट नहीं करता है।"); return; }
+        alert("📍 आपकी वर्तमान लोकेशन खोजी जा रही है...");
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                let lat = position.coords.latitude;
+                let lng = position.coords.longitude;
+                map.setView([lat, lng], 18);
+                L.marker([lat, lng], {icon: createPinIcon("📍", "#dc2626")}).addTo(map).bindPopup("आप यहाँ हैं!").openPopup();
+                alert("✅ लाइव लोकेशन मिल गई है!");
+            },
+            (error) => {
+                alert("❌ लोकेशन प्राप्त करने में असफल। कृपया GPS/Location परमिशन चेक करें।");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    let georefImageLayer = null; let georefBase64 = ""; let georefExt = "jpg"; let gcpPairs = []; let gcpCounter = 1; let currentGeorefCorners = {tl:null, tr:null, bl:null};
+    
+    function clearGeorefLayersOnly() { if (georefImageLayer) { map.removeLayer(georefImageLayer); georefImageLayer = null; } clearRefPairs(); let ctrls = document.getElementById('georefControls'); if(ctrls) ctrls.style.display = 'none'; }
+    function deleteGeorefMap() { clearGeorefLayersOnly(); let imgInp = document.getElementById('satMapImage'); if(imgInp) imgInp.value = ""; georefBase64 = ""; }
+    
+    function setupGeorefImage(base64Url, ext) {
+        georefBase64 = base64Url; georefExt = ext; let img = new Image();
+        img.onload = function() {
+            let center = map.getCenter(); let offset = 0.003; let ratio = img.height / img.width;
+            currentGeorefCorners = { tl: L.latLng(center.lat + (offset * ratio), center.lng - offset), tr: L.latLng(center.lat + (offset * ratio), center.lng + offset), bl: L.latLng(center.lat - (offset * ratio), center.lng - offset) };
+            if (typeof L.imageOverlay.rotated !== "function") return;
+            georefImageLayer = L.imageOverlay.rotated(georefBase64, currentGeorefCorners.tl, currentGeorefCorners.tr, currentGeorefCorners.bl, { opacity: document.getElementById('opacitySlider').value / 100, interactive: false }).addTo(map);
+            let ctrls = document.getElementById('georefControls'); if(ctrls) ctrls.style.display = 'block';
+        }; img.src = base64Url;
+    }
+    
+    function changeOpacity(val) { if (georefImageLayer) georefImageLayer.setOpacity(val / 100); }
+    
+    function addRefPair() {
+        if(!georefImageLayer) return alert("नक्शा अपलोड करें।");
+        let center = map.getCenter(); let offset = 0.0003 * gcpCounter; 
+        let ptRed = L.latLng(center.lat, center.lng - offset); let ptBlue = L.latLng(center.lat, center.lng + offset);
+        let mRed = L.marker(ptRed, {draggable: true, icon: createPinIcon(gcpCounter, '#ef4444')}).addTo(map); 
+        let mBlue = L.marker(ptBlue, {draggable: true, icon: createPinIcon(gcpCounter, '#3b82f6')}).addTo(map);
+        let line = L.polyline([ptRed, ptBlue], {color: '#64748b', dashArray: '5, 5', weight: 2}).addTo(map);
+        
+        mRed.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()])); 
+        mBlue.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()]));
+        
+        let pairObj = { red: mRed, blue: mBlue, line: line };
+        gcpPairs.push(pairObj); 
+        
+        let currentIndex = gcpPairs.length - 1;
+        let deleteHandler = () => {
+            if(confirm(`पॉइंट #${currentIndex + 1} को हटाना चाहते हैं?`)) {
+                map.removeLayer(pairObj.red); map.removeLayer(pairObj.blue); map.removeLayer(pairObj.line);
+                gcpPairs = gcpPairs.filter(p => p !== pairObj);
+                alert("✅ पॉइंट हटा दिया गया।");
+            }
+        };
+        mRed.on('click', deleteHandler); mBlue.on('click', deleteHandler);
+        
+        gcpCounter++;
+        alert(`✅ पॉइंट #${gcpCounter - 1} जुड़ गया। (हटाने के लिए पिन पर क्लिक करें)`);
+    }
+    
+    function clearRefPairs() { gcpPairs.forEach(p => { map.removeLayer(p.red); map.removeLayer(p.blue); map.removeLayer(p.line); }); gcpPairs = []; gcpCounter = 1; }
+    
+    function alignMap() {
+        if (!georefImageLayer || gcpPairs.length < 2) return alert("कम से कम 2 पॉइंट ज़रूरी हैं!");
+        let zoom = map.getZoom();
+        let srcLatLngs = gcpPairs.map(p => p.red.getLatLng());
+        let dstLatLngs = gcpPairs.map(p => p.blue.getLatLng());
+
+        let srcProj = srcLatLngs.map(ll => map.project(ll, zoom));
+        let dstProj = dstLatLngs.map(ll => map.project(ll, zoom));
+
+        let n = srcProj.length;
+        let sumX = 0, sumY = 0, sumU = 0, sumV = 0;
+        for (let i = 0; i < n; i++) {
+            sumX += srcProj[i].x; sumY += srcProj[i].y;
+            sumU += dstProj[i].x; sumV += dstProj[i].y;
+        }
+        let cx = sumX / n, cy = sumY / n, cu = sumU / n, cv = sumV / n;
+
+        let num = 0, den = 0;
+        for (let i = 0; i < n; i++) {
+            let dx = srcProj[i].x - cx, dy = srcProj[i].y - cy;
+            let du = dstProj[i].x - cu, dv = dstProj[i].y - cv;
+            num += (dx * du + dy * dv);
+            den += (dx * dx + dy * dy);
+        }
+        let scale = den !== 0 ? num / den : 1;
+        let a = scale, b = 0, c = cu - scale * cx, d = 0, e = scale, f = cv - scale * cy;
+
+        let trans = (ll) => {
+            let pt = map.project(ll, zoom);
+            return map.unproject(L.point(a * pt.x + b * pt.y + c, d * pt.x + e * pt.y + f), zoom);
+        };
+
+        currentGeorefCorners.tl = trans(currentGeorefCorners.tl);
+        currentGeorefCorners.tr = trans(currentGeorefCorners.tr);
+        currentGeorefCorners.bl = trans(currentGeorefCorners.bl);
+
+        georefImageLayer.reposition(currentGeorefCorners.tl, currentGeorefCorners.tr, currentGeorefCorners.bl);
+        
+        gcpPairs.forEach(p => {
+            p.red.setLatLng(p.blue.getLatLng());
+            p.line.setLatLngs([p.red.getLatLng(), p.blue.getLatLng()]);
+        });
+
+        alert("✅ नक्शा सफलतापूर्वक अलाइन और स्ट्रेच हो गया है!");
+    }
+    
+    function exportKMZ() {
+        if (!georefImageLayer || !georefBase64) return;
+        let fileName = prompt("KMZ फ़ाइल का नाम दर्ज करें:", "Ashwinis_Survey_Map"); if (!fileName) fileName = "Ashwinis_Survey_Map"; if (!fileName.toLowerCase().endsWith(".kmz")) fileName += ".kmz";
+        let zoom = map.getZoom(); 
+        let curBounds = georefImageLayer.getBounds();
+        let tl = curBounds.getNorthWest();
+        let tr = curBounds.getNorthEast();
+        let bl = curBounds.getSouthWest();
+        let pTL = map.project(tl, zoom); let pTR = map.project(tr, zoom); let pBL = map.project(bl, zoom);
+        let br = map.unproject(L.point(pTR.x + pBL.x - pTL.x, pTR.y + pBL.y - pTL.y), zoom);
+        let coords = `${bl.lng},${bl.lat} ${br.lng},${br.lat} ${tr.lng},${tr.lat} ${tl.lng},${tl.lat}`;
+        let kmlContent = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2"><Folder><name>${fileName.replace('.kmz','')}</name><description>Created By Ashwini Sir.</description><GroundOverlay><name>RS Map Overlay</name><description>Created By Ashwini Sir.</description><Icon><href>overlay_image.${georefExt}</href></Icon><gx:LatLonQuad><coordinates>${coords}</coordinates></gx:LatLonQuad></GroundOverlay></Folder></kml>`;
+        let zip = new JSZip(); zip.file("doc.kml", kmlContent); zip.file(`overlay_image.${georefExt}`, georefBase64.split(',')[1], {base64: true});
+        zip.generateAsync({type:"blob"}).then(function(content) { let a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = fileName; a.click(); });
+    }
+
+    // ================= OVERLAP MAP LOGIC =================
+    let overlapMap = L.map('overlapMap', { crs: L.CRS.Simple, minZoom: -4, maxZoom: 5 });
+    let baseOverlapLayer = null; let redOverlapLayer = null; 
+    let redCorners = { tl: null, tr: null, bl: null };
+    let overlapGcpPairs = []; let overlapGcpCounter = 1;
+
+    function applyColorFilter(canvas, targetColor) {
+        let ctx = canvas.getContext('2d'); let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height); let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i], g = data[i+1], b = data[i+2]; let brightness = (r + g + b) / 3;
+            if (brightness > 200) { data[i+3] = 0; } 
+            else { 
+                if (targetColor === 'red') { data[i] = 220; data[i+1] = 38; data[i+2] = 38; }
+                data[i+3] = 255;
+            }
+        }
+        ctx.putImageData(imgData, 0, 0); return canvas.toDataURL('image/png');
+    }
+
+    async function processOverlapFile(event, type) {
+        let file = event.target.files[0]; if (!file) return;
+        let loadingEl = document.getElementById('overlapLoadingMsg'); loadingEl.style.display = 'block';
+
+        let renderFile = async (srcData, isPdf) => {
+            let canvas = document.createElement('canvas');
+            try {
+                if (isPdf) {
+                    let pdf = await pdfjsLib.getDocument({data: new Uint8Array(srcData)}).promise;
+                    let page = await pdf.getPage(1); 
+                    let baseVp = page.getViewport({ scale: 1 });
+                    let dynamicScale = Math.min(4.0, 6000 / Math.max(baseVp.width, baseVp.height));
+                    let viewport = page.getViewport({ scale: dynamicScale });
+                    
+                    canvas.height = viewport.height; canvas.width = viewport.width;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                } else {
+                    await new Promise((res, rej) => { let img = new Image(); img.onload = () => { canvas.width = img.width; canvas.height = img.height; canvas.getContext('2d').drawImage(img, 0, 0); res(); }; img.onerror=rej; img.src = srcData; });
+                }
+
+                let base64;
+                if (type === 'overlay') { base64 = applyColorFilter(canvas, 'red'); } 
+                else { base64 = canvas.toDataURL('image/png'); }
+                
+                if (type === 'base') {
+                    if (baseOverlapLayer) overlapMap.removeLayer(baseOverlapLayer);
+                    let img = new Image(); img.onload = function() {
+                        let bounds = [[0, 0], [img.height, img.width]];
+                        baseOverlapLayer = L.imageOverlay(base64, bounds).addTo(overlapMap); overlapMap.fitBounds(bounds);
+                    }; img.src = base64;
+                } else {
+                    if (redOverlapLayer) overlapMap.removeLayer(redOverlapLayer);
+                    clearOverlapRefPairs(); 
+                    
+                    let img = new Image(); img.onload = function() {
+                        let center = overlapMap.getCenter() || L.latLng(img.height/2, img.width/2);
+                        let h = img.height * 0.5; let w = img.width * 0.5; 
+                        redCorners.tl = L.latLng(center.lat + h, center.lng - w); redCorners.tr = L.latLng(center.lat + h, center.lng + w); redCorners.bl = L.latLng(center.lat - h, center.lng - w);
+                        
+                        redOverlapLayer = L.imageOverlay.rotated(base64, redCorners.tl, redCorners.tr, redCorners.bl, { opacity: document.getElementById('overlapOpacity').value / 100, interactive: false }).addTo(overlapMap);
+                        document.getElementById('overlapGeorefControls').style.display = 'block';
+                    }; img.src = base64;
+                }
+                loadingEl.style.display = 'none';
+            } catch(e) {
+                loadingEl.style.display = 'none'; alert("Rendering Error: " + e.message);
+            }
+        };
+
+        if (file.type === 'application/pdf') { let fr = new FileReader(); fr.onload = (e) => renderFile(e.target.result, true); fr.readAsArrayBuffer(file); } 
+        else { let fr = new FileReader(); fr.onload = (e) => renderFile(e.target.result, false); fr.readAsDataURL(file); }
+    }
+
+    function changeOverlapOpacity(val) { if (redOverlapLayer) redOverlapLayer.setOpacity(val / 100); }
+    
+    function clearOverlapMap() {
+        if(baseOverlapLayer) overlapMap.removeLayer(baseOverlapLayer); if(redOverlapLayer) overlapMap.removeLayer(redOverlapLayer);
+        clearOverlapRefPairs(); baseOverlapLayer = null; redOverlapLayer = null;
+        document.getElementById('overlapGeorefControls').style.display = 'none';
+    }
+
+    function addOverlapRefPair() {
+        if(!redOverlapLayer) return alert("पहले लाल नक्शा (ऊपरी नक्शा) अपलोड करें।");
+        let center = overlapMap.getCenter(); let offset = 0.0003 * overlapGcpCounter; 
+        let ptRed = L.latLng(center.lat, center.lng - offset); let ptBlue = L.latLng(center.lat, center.lng + offset);
+        
+        let mRed = L.marker(ptRed, {draggable: true, icon: createPinIcon(overlapGcpCounter, '#ef4444')}).addTo(overlapMap); 
+        let mBlue = L.marker(ptBlue, {draggable: true, icon: createPinIcon(overlapGcpCounter, '#3b82f6')}).addTo(overlapMap);
+        let line = L.polyline([ptRed, ptBlue], {color: '#64748b', dashArray: '5, 5', weight: 2}).addTo(overlapMap);
+        
+        mRed.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()])); 
+        mBlue.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()]));
+        
+        let pairObj = { red: mRed, blue: mBlue, line: line };
+        overlapGcpPairs.push(pairObj); 
+        
+        let currentIndex = overlapGcpPairs.length - 1;
+        let deleteHandler = () => {
+            if(confirm(`कंट्रोल पॉइंट #${currentIndex + 1} को हटाना चाहते हैं?`)) {
+                overlapMap.removeLayer(pairObj.red); overlapMap.removeLayer(pairObj.blue); overlapMap.removeLayer(pairObj.line);
+                overlapGcpPairs = overlapGcpPairs.filter(p => p !== pairObj);
+                alert("✅ पॉइंट हटा दिया गया।");
+            }
+        };
+        mRed.on('click', deleteHandler); mBlue.on('click', deleteHandler);
+        
+        overlapGcpCounter++;
+    }
+
+    function clearOverlapRefPairs() {
+        overlapGcpPairs.forEach(p => { overlapMap.removeLayer(p.red); overlapMap.removeLayer(p.blue); overlapMap.removeLayer(p.line); }); 
+        overlapGcpPairs = []; overlapGcpCounter = 1; 
+    }
+
+    function alignOverlapMap() {
+        if (!redOverlapLayer || overlapGcpPairs.length < 2) return alert("कम से कम 2 कंट्रोल पॉइंट ज़रूरी हैं!");
+        let src = overlapGcpPairs.map(p => p.red.getLatLng()); 
+        let dst = overlapGcpPairs.map(p => p.blue.getLatLng());
+        let zoom = overlapMap.getZoom(); let sProj = src.map(ll => overlapMap.project(ll, zoom)); let dProj = dst.map(ll => overlapMap.project(ll, zoom)); 
+        
+        let n = sProj.length;
+        let sumX = 0, sumY = 0, sumU = 0, sumV = 0;
+        for(let i=0; i<n; i++) { sumX += sProj[i].x; sumY += sProj[i].y; sumU += dProj[i].x; sumV += dProj[i].y; }
+        let cx = sumX / n, cy = sumY / n, cu = sumU / n, cv = sumV / n;
+        
+        let num = 0, den = 0;
+        for(let i=0; i<n; i++) {
+            let dx = sProj[i].x - cx, dy = sProj[i].y - cy;
+            let du = dProj[i].x - cu, dv = dProj[i].y - cv;
+            num += (dx * du + dy * dv);
+            den += (dx * dx + dy * dy);
+        }
+        let scale = den !== 0 ? num / den : 1;
+        let a = scale, b = 0, c = cu - scale * cx, d = 0, e = scale, f = cv - scale * cy;
+
+        let trans = (ll) => { let pt = overlapMap.project(ll, zoom); return overlapMap.unproject(L.point(a*pt.x + b*pt.y + c, d*pt.x + e*pt.y + f), zoom); };
+        
+        redCorners.tl = trans(redCorners.tl); 
+        redCorners.tr = trans(redCorners.tr); 
+        redCorners.bl = trans(redCorners.bl);
+
+        redOverlapLayer.reposition(redCorners.tl, redCorners.tr, redCorners.bl);
+        overlapGcpPairs.forEach(p => { let newPos = trans(p.red.getLatLng()); p.red.setLatLng(newPos); p.line.setLatLngs([newPos, p.blue.getLatLng()]); }); 
+        alert("✅ लाल नक्शा सफलतापूर्वक अलाइन और स्ट्रेच हो गया है!");
+    }
+</script>
+
+</body>
+</html>
