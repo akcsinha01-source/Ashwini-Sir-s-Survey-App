@@ -7,45 +7,51 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Source Code
+    - name: Checkout Code
       uses: actions/checkout@v4
+
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 20
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
+    - name: Prepare Web Directory
+      run: |
+        mkdir -p www
+        cp index.html www/
+        [ -f manifest.json ] && cp manifest.json www/ || true
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Initialize Capacitor Project
+    - name: Install Capacitor & Add Android
       run: |
         npm init -y
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-        npx cap init "Survey App" "com.ashwini.surveyapp" --web-dir .
+        npm install @capacitor/core@latest @capacitor/cli@latest @capacitor/android@latest
+        npx cap init "Survey App" "com.ashwini.surveyapp" --web-dir www
         npx cap add android
-        npx cap copy
 
-    - name: Add Permissions (Internet & GPS Location)
+    - name: Add Permissions
       run: |
         sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET" />\n<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />' android/app/src/main/AndroidManifest.xml
 
-    - name: Build Release/Debug APK
+    - name: Sync Capacitor
+      run: |
+        npx cap sync android
+
+    - name: Build APK with Gradle
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-daemon
 
-    - name: Upload Clean APK Artifact
+    - name: Upload Clean APK
       uses: actions/upload-artifact@v4
       with:
         name: Survey-App-Clean-APK
