@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ashwini's Survey App</title>
-    
-    <!-- PWA Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
 
     <!-- Leaflet CSS for Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- HTML2Canvas & PDF Libraries Loaded Properly in Head -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; display: flex; justify-content: center; width: 100vw; overflow-x: hidden; }
@@ -138,7 +139,7 @@
             position: absolute; bottom: 6px; left: 6px; z-index: 1000;
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px);
             padding: 5px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            width: 155px; display: none; border: 1px solid #059669;
+            width: 165px; display: none; border: 1px solid #059669;
         }
         .floating-control-panel.active { display: block; }
         
@@ -151,6 +152,66 @@
         .edge-label-container { background: transparent; border: none; box-shadow: none; overflow: visible !important; }
         .edge-label-box { background: rgba(255, 255, 255, 0.92); border: 1px solid; padding: 1px 4px; border-radius: 3px; font-size: 10px; font-weight: bold; white-space: nowrap; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3); margin-bottom: 6px; }
         .split-active { cursor: crosshair !important; }
+
+        /* GOOGLE MAPS STYLE LIVE LOCATION BLUE DOT WITH PULSE */
+        .google-live-dot-wrap { background: transparent !important; border: none !important; }
+        .google-live-dot-container { position: relative; width: 24px; height: 24px; }
+        .google-live-dot { width: 14px; height: 14px; background-color: #1a73e8; border: 2.5px solid #ffffff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.4); z-index: 2; }
+        .google-live-pulse { width: 24px; height: 24px; background-color: rgba(26, 115, 232, 0.4); border-radius: 50%; position: absolute; top: 0; left: 0; animation: google-pulse-anim 2s infinite ease-out; z-index: 1; }
+        @keyframes google-pulse-anim { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
+
+        /* ULTRA CLEAR VISIBLE COMPASS WITH BOLD N AND S */
+        .floating-compass {
+            position: absolute; top: 8px; right: 64px; z-index: 1000;
+            width: 44px; height: 44px; background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px); border: 2px solid #0f172a;
+            border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; user-select: none;
+        }
+        .compass-dial { width: 40px; height: 40px; transition: transform 0.1s linear; }
+
+        /* CLEAN A4 REPORT MODAL */
+        .report-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.85); z-index: 99999;
+            overflow-y: auto; padding: 10px; box-sizing: border-box; justify-content: center;
+        }
+        .report-wrapper-box {
+            width: 100%; max-width: 790px; margin-bottom: 25px;
+        }
+        .report-paper {
+            background: white; width: 100%; min-height: 1060px;
+            padding: 20px 24px; box-sizing: border-box; border-radius: 4px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #0f172a; position: relative; display: flex; flex-direction: column; justify-content: flex-start;
+        }
+        .report-header { text-align: center; border-bottom: 2px solid #065f46; padding-bottom: 4px; margin-bottom: 8px; }
+        .report-header h2 { margin: 0; color: #065f46; font-size: 22px; font-weight: 800; }
+        
+        .rep-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+        .rep-item { font-size: 11.5px; font-weight: bold; }
+        .rep-item input { width: 100%; padding: 3px 5px; font-size: 11.5px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; margin-top: 2px; }
+        
+        .rep-table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 11px; }
+        .rep-table th, .rep-table td { border: 1px solid #94a3b8; padding: 4px; text-align: center; }
+        .rep-table th { background: #f1f5f9; font-weight: 800; color: #065f46; }
+        .rep-table input { width: 100%; border: none; background: transparent; font-size: 11px; text-align: center; padding: 2px; }
+
+        .report-map-container {
+            width: 100%; height: 430px; border: 2px solid #065f46; border-radius: 4px;
+            margin: 6px 0; position: relative; background: #ffffff; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .report-map-container img {
+            width: 100%; height: 100%; object-fit: contain;
+        }
+        
+        /* EXACT 1 INCH CLEAR SPACE BELOW MAP BOX FOR SIGNATURES */
+        .rep-sign-row {
+            display: flex; justify-content: space-around; margin-top: 38px; margin-bottom: 25px; padding: 0 40px;
+            font-size: 13px; font-weight: bold; text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -341,6 +402,19 @@
         <div class="map-wrapper">
             <div id="scaleMap"></div>
             <button class="floating-home-btn" onclick="openHome()">🏠 होम</button>
+
+            <!-- FLOATING COMPASS WITH CRYSTAL-CLEAR N AND S -->
+            <div class="floating-compass" onclick="requestCompassPermission()" title="दिशा सूचक (North/South)">
+                <svg class="compass-dial" id="scaleCompassDial" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+                    <polygon points="50,14 61,50 50,42 39,50" fill="#dc2626" />
+                    <polygon points="50,86 61,50 50,58 39,50" fill="#475569" />
+                    <text x="50" y="11" font-size="14" font-weight="900" fill="#dc2626" text-anchor="middle">N</text>
+                    <text x="50" y="99" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">S</text>
+                    <circle cx="50" cy="50" r="4" fill="#0f172a"/>
+                </svg>
+            </div>
+
             <div class="floating-toolbar">
                 <div id="customDrawStatus" class="floating-status"></div>
                 
@@ -348,6 +422,9 @@
                 <button class="action-btn" id="pointBackBtn" style="display:none; background:#d97706; margin:0 0 2px 0; padding:3px 2px;" onclick="undoLastPoint()">⬅️ पीछे</button>
                 <button class="action-btn" id="finishDrawBtn" style="display:none; background:#7c3aed; margin:0 0 2px 0; padding:3px 2px;" onclick="finishStepDraw(scaleMap, scaleDrawnItems, 'scaleDrawColor')">🏁 सेव</button>
                 <button class="action-btn" id="finishEditBtn" style="display:none; background:#059669; margin:0 0 2px 0; padding:3px 2px;" onclick="finishEditing()">✅ डन</button>
+                
+                <!-- AUTO-POPUP REPORT BUTTON ON PLOT SELECTION -->
+                <button class="action-btn" id="scaleReportBtn" style="display:none; background:#047857; margin:0 0 2px 0; padding:3px 2px;" onclick="openSurveyReportModal()">📄 रिपोर्ट</button>
 
                 <button class="toggle-ribbon-btn" onclick="toggleRibbon(this)">🛠️ मेनू</button>
                 
@@ -381,6 +458,18 @@
             <button class="floating-home-btn" onclick="openHome()">🏠 होम</button>
             <button class="fullscreen-toggle-btn" onclick="toggleSatFloatingPanel()">🔲 कंट्रोल्स</button>
 
+            <!-- FLOATING COMPASS WITH CRYSTAL-CLEAR N AND S -->
+            <div class="floating-compass" onclick="requestCompassPermission()" title="दिशा सूचक (North/South)">
+                <svg class="compass-dial" id="satCompassDial" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+                    <polygon points="50,14 61,50 50,42 39,50" fill="#dc2626" />
+                    <polygon points="50,86 61,50 50,58 39,50" fill="#475569" />
+                    <text x="50" y="11" font-size="14" font-weight="900" fill="#dc2626" text-anchor="middle">N</text>
+                    <text x="50" y="99" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle">S</text>
+                    <circle cx="50" cy="50" r="4" fill="#0f172a"/>
+                </svg>
+            </div>
+
             <div class="floating-toolbar">
                 <div id="satDrawStatus" class="floating-status"></div>
                 
@@ -388,6 +477,9 @@
                 <button class="action-btn" id="satPointBackBtn" style="display:none; background:#d97706; margin:0 0 2px 0; padding:3px 2px;" onclick="undoLastPoint()">⬅️ पीछे</button>
                 <button class="action-btn" id="satFinishDrawBtn" style="display:none; background:#7c3aed; margin:0 0 2px 0; padding:3px 2px;" onclick="finishStepDraw(map, satDrawnItems, 'satDrawColor')">🏁 सेव</button>
                 <button class="action-btn" id="satFinishEditBtn" style="display:none; background:#059669; margin:0 0 2px 0; padding:3px 2px;" onclick="finishEditing()">✅ डन</button>
+
+                <!-- AUTO-POPUP REPORT BUTTON ON SATELLITE PLOT SELECTION -->
+                <button class="action-btn" id="satReportBtn" style="display:none; background:#047857; margin:0 0 2px 0; padding:3px 2px;" onclick="openSurveyReportModal()">📄 रिपोर्ट</button>
 
                 <button class="toggle-ribbon-btn" onclick="toggleRibbon(this)">🛠️ मेनू</button>
                 
@@ -419,7 +511,7 @@
                 <div style="display:flex; gap:2px; margin-bottom:3px;">
                     <input type="text" id="searchPlace" placeholder="जगह..." style="padding:2px 4px; font-size:9px; flex:1; height:18px; border:1px solid #cbd5e1; border-radius:3px;">
                     <button class="action-btn" style="width: auto; margin-top: 0; padding: 2px 5px; font-size:9px; height:18px;" onclick="searchLocation()">🔍</button>
-                    <button class="action-btn" style="width: auto; margin-top: 0; padding: 2px 5px; font-size:9px; height:18px; background:#16a34a;" onclick="goToLiveLocation()" title="लाइव लोकेशन">📍</button>
+                    <button class="action-btn" style="width: auto; margin-top: 0; padding: 2px 5px; font-size:9px; height:18px; background:#1a73e8;" onclick="goToLiveLocation()" title="गूगल मैप्स लाइव लोकेशन">📍</button>
                 </div>
                 
                 <div style="display:flex; gap:2px; margin-bottom:3px;">
@@ -438,10 +530,14 @@
 
                 <div id="georefLoadingMsg" class="loadingMsg" style="font-size:9px; margin-top:2px;">⚙️ A0 नक्शा लोड हो रहा है...</div>
                 
+                <!-- STEP-BY-STEP POINT FLOW FOR SATELLITE -->
                 <div id="georefControls" style="display:none; margin-top:3px;">
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
-                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0;" onclick="addRefPair()">➕ पॉइंट</button>
-                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0; background:#059669;" onclick="alignMap()">🚀 अलाइन</button>
+                        <button class="action-btn" id="satAddPairBtn" style="font-size:9px; padding:3px; margin:0;" onclick="startSatPointFlow()">➕ पॉइंट</button>
+                        <button class="action-btn" id="satOkPointBtn" style="font-size:9px; padding:3px; margin:0; background:#2563eb; display:none;" onclick="confirmSatPointStep()">✅ OK</button>
+                        <button class="action-btn" style="font-size:9px; padding:3px; margin:0; background:#059669;" onclick="alignMap()">🚀 अलाइन</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; margin-top:2px;">
                         <button class="export-btn" style="font-size:9px; padding:2px; margin:0;" onclick="exportKMZ()">📥 KMZ</button>
                         <button class="danger-btn" style="font-size:9px; padding:2px; margin:0;" onclick="clearRefPairs()">हटाएँ</button>
                     </div>
@@ -467,7 +563,7 @@
             </div>
 
             <!-- OVERLAP CONTROL PANEL FOR MAP IMPORT -->
-            <div class="floating-control-panel active" id="overlapFloatingPanel" style="width: 155px;">
+            <div class="floating-control-panel active" id="overlapFloatingPanel" style="width: 165px;">
                 <div style="font-size:10px; font-weight:bold; color:#065f46; margin-bottom:3px; text-align:center; border-bottom:1px solid #cbd5e1; padding-bottom:1px;">🔀 नक्शा मिलान कंट्रोल्स</div>
                 
                 <div style="margin-bottom:3px;">
@@ -487,12 +583,112 @@
 
                 <div id="overlapLoadingMsg" class="loadingMsg" style="font-size:9px; margin-top:2px;">⚙️ A0 नक्शा लोड हो रहा है...</div>
 
+                <!-- STEP-BY-STEP POINT FLOW FOR OVERLAP -->
                 <div id="overlapGeorefControls" style="display:none; margin-top:2px;">
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px;">
-                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0;" onclick="addOverlapRefPair()">➕ पॉइंट</button>
-                        <button class="action-btn" style="font-size:9px; padding:2px; margin:0; background:#059669;" onclick="alignOverlapMap()">🚀 अलाइन</button>
+                        <button class="action-btn" id="overlapAddPairBtn" style="font-size:9px; padding:3px; margin:0;" onclick="startOverlapPointFlow()">➕ पॉइंट</button>
+                        <button class="action-btn" id="overlapOkPointBtn" style="font-size:9px; padding:3px; margin:0; background:#2563eb; display:none;" onclick="confirmOverlapPointStep()">✅ OK</button>
+                        <button class="action-btn" style="font-size:9px; padding:3px; margin:0; background:#059669;" onclick="alignOverlapMap()">🚀 अलाइन</button>
                     </div>
                     <button class="danger-btn" style="font-size:9px; padding:2px; margin:2px 0 0 0; width:100%;" onclick="clearOverlapMap()">नक्शा साफ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= LEGAL A4 SURVEY REPORT MODAL ================= -->
+<div id="surveyReportModal" class="report-modal">
+    <div class="report-wrapper-box">
+        <!-- MODAL CONTROLS (SEPARATED COMPLETELY OUTSIDE PRINTABLE AREA) -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; background:#f1f5f9; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;">
+            <button onclick="closeSurveyReportModal()" style="padding:6px 12px; font-size:12px; font-weight:bold; background:#dc2626; color:white; border:none; border-radius:4px; cursor:pointer;">✖ बंद करें</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button onclick="addReportPlotRow()" style="padding:5px 10px; font-size:11px; background:#2563eb; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">➕ दूसरा खाता-खेसरा जोड़ें</button>
+                <label style="font-size:12px; font-weight:bold; cursor:pointer; color:#1e293b;">
+                    <input type="checkbox" id="toggleReportEdgesCheck" checked onchange="toggleReportEdges(this.checked)"> भुजाओं का माप दिखाएँ
+                </label>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <label style="font-size:12px; font-weight:bold; color:#1e293b;">प्लॉट रंग:</label>
+                    <input type="color" id="reportPlotFillColor" value="#fef08a" onchange="changeReportPlotColor(this.value)" style="width:26px; height:26px; border:none; cursor:pointer; background:transparent;">
+                </div>
+                <button onclick="printA4SurveyReport()" style="padding:6px 16px; font-size:13px; font-weight:bold; background:#059669; color:white; border:none; border-radius:4px; cursor:pointer;">🖨️ प्रिंट / सेव PDF</button>
+            </div>
+        </div>
+
+        <!-- PURE CLEAN A4 SHEET (ONLY THIS GETS PRINTED) -->
+        <div class="report-paper" id="reportA4PaperContent">
+            <div>
+                <!-- REPORT HEADER -->
+                <div class="report-header">
+                    <h2>भूमि पैमाइश रिपोर्ट</h2>
+                </div>
+
+                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
+                    <div style="font-size:11.5px; font-weight:bold; color:#065f46; margin-bottom:3px; border-bottom:1px solid #e2e8f0;">👤 रैयत का विवरण:</div>
+                    <div class="rep-grid">
+                        <div class="rep-item">रैयत का नाम: <input type="text" id="repRaiyatName" placeholder="नाम दर्ज करें"></div>
+                        <div class="rep-item">पिता/पति का नाम: <input type="text" id="repFatherName" placeholder="पिता का नाम"></div>
+                        <div class="rep-item">पता (ग्राम/टोला): <input type="text" id="repAddress" placeholder="स्थानीय पता"></div>
+                    </div>
+                </div>
+
+                <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:6px 8px; margin-bottom:6px;">
+                    <div style="font-size:11.5px; font-weight:bold; color:#065f46; margin-bottom:3px; border-bottom:1px solid #e2e8f0;">📍 भूमि का प्रशासनिक विवरण:</div>
+                    <div class="rep-grid" style="grid-template-columns: repeat(5, 1fr);">
+                        <div class="rep-item">मौजा: <input type="text" id="repMauza" placeholder="मौजा"></div>
+                        <div class="rep-item">थाना सं०: <input type="text" id="repThanaNo" placeholder="थाना सं०"></div>
+                        <div class="rep-item">थाना: <input type="text" id="repThana" placeholder="थाना"></div>
+                        <div class="rep-item">अंचल: <input type="text" id="repAnchal" placeholder="अंचल"></div>
+                        <div class="rep-item">जिला: <input type="text" id="repJila" placeholder="जिला"></div>
+                    </div>
+                </div>
+
+                <!-- PLOTS CHAUHADDI TABLE -->
+                <div style="margin-bottom:6px;">
+                    <div style="font-size:11.5px; font-weight:bold; color:#065f46; margin-bottom:3px;">📋 खाता, खेसरा, रकबा एवं चौहद्दी विवरणी:</div>
+                    <table class="rep-table" id="reportPlotsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:12%;">खाता सं०</th>
+                                <th style="width:12%;">खेसरा सं०</th>
+                                <th style="width:16%;">रकबा</th>
+                                <th style="width:15%;">उत्तर चौहद्दी</th>
+                                <th style="width:15%;">दक्षिण चौहद्दी</th>
+                                <th style="width:15%;">पूरब चौहद्दी</th>
+                                <th style="width:15%;">पश्चिम चौहद्दी</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportPlotsTbody">
+                            <tr>
+                                <td><input type="text" placeholder="खाता"></td>
+                                <td><input type="text" placeholder="खेसरा"></td>
+                                <td><input type="text" id="autoPlotRakba" placeholder="रकबा" style="font-weight:bold; color:#b91c1c;"></td>
+                                <td><input type="text" placeholder="उत्तर"></td>
+                                <td><input type="text" placeholder="दक्षिण"></td>
+                                <td><input type="text" placeholder="पूरब"></td>
+                                <td><input type="text" placeholder="पश्चिम"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- DIRECT RENDERED IMAGE MAP BOX (100% RELIABLE ZERO-SHIFT) -->
+                <div style="font-size:11.5px; font-weight:bold; color:#065f46; margin-top:4px;">🗺️ नजरी नक्शा:</div>
+                <div id="reportMapPreview" class="report-map-container">
+                    <img id="reportFrozenImage" alt="नक्शा लोड हो रहा है..." />
+                </div>
+            </div>
+
+            <!-- EXACT 1 INCH (38px) CLEAR SPACE BELOW MAP BOX FOR SIGNATURES -->
+            <div class="rep-sign-row">
+                <div>
+                    __________________________<br>
+                    रैयत का हस्ताक्षर / टीप
+                </div>
+                <div>
+                    __________________________<br>
+                    गवाह / पंच का हस्ताक्षर
                 </div>
             </div>
         </div>
@@ -506,8 +702,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script> pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; </script>
-<!-- HTML2PDF Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
     // --- HOME & TAB NAVIGATION ---
@@ -725,21 +919,8 @@
             margin:       0,
             filename:     'Ashwinis_A0_Survey_Map_UltraHD.pdf',
             image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { 
-                scale: 3, 
-                useCORS: true, 
-                logging: false, 
-                scrollX: 0, 
-                scrollY: 0,
-                allowTaint: true,
-                imageTimeout: 0
-            }, 
-            jsPDF: { 
-                unit: 'mm', 
-                format: 'a0', 
-                orientation: isLandscape ? 'landscape' : 'portrait', 
-                compress: false 
-            } 
+            html2canvas:  { scale: 3, useCORS: true, logging: false, scrollX: 0, scrollY: 0, allowTaint: true, imageTimeout: 0 }, 
+            jsPDF:        { unit: 'mm', format: 'a0', orientation: isLandscape ? 'landscape' : 'portrait', compress: false } 
         };
 
         setTimeout(() => {
@@ -759,22 +940,13 @@
     function toggleSatFloatingPanel() { document.getElementById('satFloatingPanel').classList.toggle('active'); }
     function toggleOverlapFloatingPanel() { document.getElementById('overlapFloatingPanel').classList.toggle('active'); }
 
-    /* =========================================================================
-       लट्टू (Pin) का पिनपॉइंट ऊपर और पकड़ने वाला गोलाकार हिस्सा नीचे
-       Anchor: [18, 0] यानी सुई की नोक ऊपर नक्शे के सटीक पॉइंट को टच करेगी
-       ========================================================================= */
     function createPinIcon(num, color) {
         let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="52" viewBox="0 0 36 52">
             <path d="M18 0 C 18 0 6 28 6 38 C 6 46 10 52 18 52 C 26 52 30 46 30 38 C 30 28 18 0 18 0 z" fill="${color}" stroke="#ffffff" stroke-width="2.5" opacity="0.95"/>
             <circle cx="18" cy="38" r="8" fill="#ffffff" opacity="0.25"/>
             <text x="18" y="43" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">${num}</text>
         </svg>`;
-        return L.icon({ 
-            iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), 
-            iconSize: [36, 52], 
-            iconAnchor: [18, 0], 
-            popupAnchor: [0, 45] 
-        });
+        return L.icon({ iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), iconSize: [36, 52], iconAnchor: [18, 0], popupAnchor: [0, 45] });
     }
 
     function createSimplePin(color) {
@@ -782,11 +954,7 @@
             <path d="M18 0 C 18 0 6 28 6 38 C 6 46 10 52 18 52 C 26 52 30 46 30 38 C 30 28 18 0 18 0 z" fill="${color}" stroke="#ffffff" stroke-width="2.5" opacity="0.95"/>
             <circle cx="18" cy="38" r="6" fill="#ffffff"/>
         </svg>`;
-        return L.icon({ 
-            iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), 
-            iconSize: [30, 44], 
-            iconAnchor: [15, 0] 
-        });
+        return L.icon({ iconUrl: 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString))), iconSize: [30, 44], iconAnchor: [15, 0] });
     }
 
     // ================= MAP INITIALIZATION (SCALE MAP) =================
@@ -800,9 +968,8 @@
 
     L.LatLng.prototype.distanceTo = function (other) { return scaleMap.options.crs === L.CRS.Simple ? Math.sqrt(Math.pow(other.lng - this.lng, 2) + Math.pow(other.lat - this.lat, 2)) : L.CRS.EPSG3857.distance(this, L.latLng(other)); };
 
-    // Exact Mathematical Units Tracking (Scale Calibrator)
     let calibState = 0; 
-    let pixelsPerUnit = null; // Stored in pixels per Kari or pixels per Foot directly
+    let pixelsPerUnit = null; 
     let calibUnitUsed = 'kari';
     let calibMarkers = []; let calibLine = null; let cPt1, cPt2;
 
@@ -858,15 +1025,12 @@
             }
             
             let distEntered = parseFloat(actualDist);
-            
-            // Absolute Euclidean pixel distance directly on simple plane
             let dx = cPt2.lng - cPt1.lng;
             let dy = cPt2.lat - cPt1.lat;
             let pixelDist = Math.sqrt(dx * dx + dy * dy);
 
-            // Stored in direct unit: pixels per 1 unit of what was entered
             pixelsPerUnit = pixelDist / distEntered;
-            calibUnitUsed = inputUnit; // 'kari' or 'feet'
+            calibUnitUsed = inputUnit; 
             
             let statusEl = document.getElementById('scaleStatus'); 
             if(statusEl) statusEl.style.display = 'block';
@@ -886,7 +1050,7 @@
         if(!pixelsPerUnit && btnEl) { btnEl.innerHTML = "📏 1. स्केल सेट करें"; btnEl.style.background = "#059669"; }
     }
 
-    // ================= MODE MANAGERS (COLOR, EDIT, SPLIT) =================
+    // ================= MODE MANAGERS & REPORT INTEGRATION =================
     let stepDrawType = null; let stepDrawMap = null; let stepDrawnItemsGroup = null;
     let stepCurrentPoints = []; let stepCurrentMarkers = []; let stepTempLine = null;
     
@@ -894,11 +1058,34 @@
     let isEditingMode = false; let activeEditMap = null; let activeEditGroup = null; let editVertexMarkers = [];
     let isColoringMode = false; let activeColorMap = null; let activeColorGroup = null; let activeColorPickerId = null;
 
+    let currentlySelectedPlotLayer = null;
+    let currentlySelectedMap = null;
+    let showReportEdges = true;
+
     let colorsList = ['#059669', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899'];
 
     function disableAllModes(mapObj) {
         if(isSplittingMode) deactivateSplitMode(mapObj); if(isEditingMode) finishEditing();
         if(isColoringMode) deactivateColorMode(mapObj); if(stepDrawType) clearStepTemp();
+    }
+
+    function selectPlotForReport(layer, mapObj) {
+        if(currentlySelectedPlotLayer && currentlySelectedPlotLayer !== layer) {
+            let prevCol = currentlySelectedPlotLayer.defaultColor || '#059669';
+            currentlySelectedPlotLayer.setStyle({ color: prevCol, fillColor: prevCol, fillOpacity: 0.15 });
+        }
+        
+        currentlySelectedPlotLayer = layer;
+        currentlySelectedMap = mapObj;
+        layer.defaultColor = layer.options.color || '#059669';
+        
+        // Exact Highlight directly on the boundary containing measurement
+        layer.setStyle({ color: '#b91c1c', fillColor: '#fef08a', fillOpacity: 0.45 });
+        
+        let rBtn = (mapObj === scaleMap) ? document.getElementById('scaleReportBtn') : document.getElementById('satReportBtn');
+        if (rBtn) {
+            rBtn.style.display = 'block';
+        }
     }
 
     function toggleColorMode(mapObj, drawnGroup, colorPickerId) {
@@ -917,7 +1104,7 @@
 
     function executeColorChange(layer, mapObj, drawnGroup) {
         let newColor = document.getElementById(activeColorPickerId).value;
-        layer.setStyle({ color: newColor }); layer.options.color = newColor; 
+        layer.setStyle({ color: newColor, fillColor: newColor }); layer.options.color = newColor; 
         if(!layer.feature) layer.feature = { type: 'Feature', properties: {} };
         layer.feature.properties.color = newColor; 
         addLabelsToLayer(layer, mapObj);
@@ -1002,7 +1189,7 @@
         if(stepDrawType === 'polygon' && stepCurrentPoints.length < 3) return alert("प्लॉट बनाने के लिए कम से कम 3 पॉइंट्स चाहिए!");
         
         let finalLayer; let selectedColor = document.getElementById(colorPickerId).value || '#059669';
-        if(stepDrawType === 'polygon') finalLayer = L.polygon(stepCurrentPoints, {color: selectedColor, weight: 3, fillOpacity: 0.15});
+        if(stepDrawType === 'polygon') finalLayer = L.polygon(stepCurrentPoints, {color: selectedColor, fillColor: selectedColor, weight: 3, fillOpacity: 0.2});
         else finalLayer = L.polyline(stepCurrentPoints, {color: selectedColor, weight: 3});
 
         finalLayer.options.color = selectedColor; finalLayer.feature = { type: 'Feature', properties: { color: selectedColor, type: stepDrawType } };
@@ -1012,7 +1199,14 @@
         finalLayer.on('click', function() { 
             if(isSplittingMode) executePolygonSplit(this, mapObj, drawnGroup); 
             else if(isColoringMode) executeColorChange(this, mapObj, drawnGroup);
+            else if(this instanceof L.Polygon) selectPlotForReport(this, mapObj);
         });
+
+        // Automatically select the completed polygon for report
+        if (stepDrawType === 'polygon') {
+            selectPlotForReport(finalLayer, mapObj);
+        }
+
         clearStepTemp(); stepDrawType = null;
     }
 
@@ -1160,13 +1354,14 @@
                 let color = colorsList[idx % colorsList.length];
                 originalFeat.properties = { color: color, type: 'polygon' }; 
                 
-                let newLayer = L.geoJSON(originalFeat, { style: { color: color, weight: 3, fillOpacity: 0.2 } });
+                let newLayer = L.geoJSON(originalFeat, { style: { color: color, fillColor: color, weight: 3, fillOpacity: 0.2 } });
                 newLayer.eachLayer(l => {
                     l.options.color = color; 
                     drawnGroup.addLayer(l); addLabelsToLayer(l, mapObj);
                     l.on('click', function() { 
                         if(isSplittingMode) executePolygonSplit(this, mapObj, drawnGroup); 
                         else if(isColoringMode) executeColorChange(this, mapObj, drawnGroup);
+                        else if(this instanceof L.Polygon) selectPlotForReport(this, mapObj);
                     });
                 });
             }); alert(`✅ प्लॉट सफलतापूर्वक ${parts} बराबर हिस्सों में कट गया है!`);
@@ -1174,7 +1369,6 @@
         deactivateSplitMode(mapObj);
     }
 
-    // Direct Plane Polygon Area Calculation on Simple Plane
     function getCRSArea(latlngs) {
         let area = 0, j = latlngs.length - 1;
         for (let i = 0; i < latlngs.length; i++) {
@@ -1190,7 +1384,7 @@
         for (let i = 0; i < latLngs.length; i++) {
             let p1 = latLngs[i]; let p2 = latLngs[(i + 1) % latLngs.length];
             area += (p2.lng * rad - p1.lng * rad) * (2 + Math.sin(p1.lat * rad) + Math.sin(p2.lat * rad));
-        } return Math.abs(area * earthRadius * earthRadius / 2) * 10.7639; // sq feet
+        } return Math.abs(area * earthRadius * earthRadius / 2) * 10.7639;
     }
 
     // ================= 100% ACCURATE SCALE & AREA CALCULATION =================
@@ -1212,61 +1406,42 @@
                 if (!pixelsPerUnit) return;
                 let pixelArea = getCRSArea(latlngs);
                 
-                // Convert pixelsPerUnit to user's currently selected lenUnit ('kari' or 'feet')
                 let currentPixPerUnit = pixelsPerUnit;
                 if (calibUnitUsed === 'kari' && lenUnit === 'feet') {
-                    currentPixPerUnit = pixelsPerUnit / 0.66; // 1 kari = 0.66 ft
+                    currentPixPerUnit = pixelsPerUnit / 0.66; 
                 } else if (calibUnitUsed === 'feet' && lenUnit === 'kari') {
                     currentPixPerUnit = pixelsPerUnit * 0.66;
                 }
 
                 let unitArea = pixelArea / (currentPixPerUnit * currentPixPerUnit);
-
-                if (lenUnit === 'kari') {
-                    // 1 Dismil = 1000 Sq Kari
-                    dismil = unitArea / 1000;
-                } else {
-                    // 1 Dismil = 435.6 Sq Feet
-                    dismil = unitArea / 435.6;
-                }
+                if (lenUnit === 'kari') dismil = unitArea / 1000;
+                else dismil = unitArea / 435.6;
             } else {
-                // Satellite Spherical Earth Area in Sq Feet
                 let sqFtArea = calculateGeodesicArea(latlngs);
                 dismil = sqFtArea / 435.6;
             }
 
             let areaHTML = "";
-            if (areaUnit === 'decimal') {
-                areaHTML = formatDecimalArea(dismil);
-            } else if (areaUnit === 'acre') {
-                areaHTML = `${(dismil / 100).toFixed(3)} एकड़`;
-            } else if (areaUnit === 'sqmt') {
-                let sqMt = dismil * 40.4686;
-                areaHTML = `${sqMt.toFixed(2)} वर्गमी`;
-            }
+            if (areaUnit === 'decimal') areaHTML = formatDecimalArea(dismil);
+            else if (areaUnit === 'acre') areaHTML = `${(dismil / 100).toFixed(3)} एकड़`;
+            else if (areaUnit === 'sqmt') areaHTML = `${(dismil * 40.4686).toFixed(2)} वर्गमी`;
 
+            layer.calculatedRakbaText = areaHTML;
             layer.bindTooltip(areaHTML, {permanent: true, direction: 'center', className: 'map-polygon-label'}).openTooltip();
 
-            // Perimeter Edges calculation
             for (let i = 0; i < latlngs.length; i++) {
                 let p1 = latlngs[i]; let p2 = latlngs[(i + 1) % latlngs.length];
                 let distValue = 0;
 
                 if (isScale) {
-                    let dx = p2.lng - p1.lng;
-                    let dy = p2.lat - p1.lat;
+                    let dx = p2.lng - p1.lng; let dy = p2.lat - p1.lat;
                     let pDist = Math.sqrt(dx * dx + dy * dy);
-
                     let currentPixPerUnit = pixelsPerUnit;
-                    if (calibUnitUsed === 'kari' && lenUnit === 'feet') {
-                        currentPixPerUnit = pixelsPerUnit / 0.66;
-                    } else if (calibUnitUsed === 'feet' && lenUnit === 'kari') {
-                        currentPixPerUnit = pixelsPerUnit * 0.66;
-                    }
+                    if (calibUnitUsed === 'kari' && lenUnit === 'feet') currentPixPerUnit = pixelsPerUnit / 0.66;
+                    else if (calibUnitUsed === 'feet' && lenUnit === 'kari') currentPixPerUnit = pixelsPerUnit * 0.66;
                     distValue = pDist / currentPixPerUnit;
                 } else {
-                    let distMeters = mapObj.distance(p1, p2);
-                    let distFt = distMeters * 3.28084;
+                    let distMeters = mapObj.distance(p1, p2); let distFt = distMeters * 3.28084;
                     distValue = (lenUnit === 'kari') ? (distFt / 0.66) : distFt;
                 }
 
@@ -1284,20 +1459,14 @@
                 let distValue = 0;
 
                 if (isScale) {
-                    let dx = p2.lng - p1.lng;
-                    let dy = p2.lat - p1.lat;
+                    let dx = p2.lng - p1.lng; let dy = p2.lat - p1.lat;
                     let pDist = Math.sqrt(dx * dx + dy * dy);
-
                     let currentPixPerUnit = pixelsPerUnit;
-                    if (calibUnitUsed === 'kari' && lenUnit === 'feet') {
-                        currentPixPerUnit = pixelsPerUnit / 0.66;
-                    } else if (calibUnitUsed === 'feet' && lenUnit === 'kari') {
-                        currentPixPerUnit = pixelsPerUnit * 0.66;
-                    }
+                    if (calibUnitUsed === 'kari' && lenUnit === 'feet') currentPixPerUnit = pixelsPerUnit / 0.66;
+                    else if (calibUnitUsed === 'feet' && lenUnit === 'kari') currentPixPerUnit = pixelsPerUnit * 0.66;
                     distValue = pDist / currentPixPerUnit;
                 } else {
-                    let distMeters = mapObj.distance(p1, p2);
-                    let distFt = distMeters * 3.28084;
+                    let distMeters = mapObj.distance(p1, p2); let distFt = distMeters * 3.28084;
                     distValue = (lenUnit === 'kari') ? (distFt / 0.66) : distFt;
                 }
 
@@ -1317,6 +1486,140 @@
     function clearDrawings(mapObj, drawnGroup) {
         drawnGroup.eachLayer(l => { if(l.edgeLabels) mapObj.removeLayer(l.edgeLabels); });
         drawnGroup.clearLayers(); clearStepTemp(); disableAllModes(mapObj);
+        document.getElementById('scaleReportBtn').style.display = 'none';
+        document.getElementById('satReportBtn').style.display = 'none';
+        currentlySelectedPlotLayer = null;
+    }
+
+    // ================= LEGAL A4 SURVEY REPORT SYSTEM (ACCURATE 16"=1 MILE DIRECT SYNC) =================
+    async function openSurveyReportModal() {
+        if (!currentlySelectedPlotLayer) return alert("कृपया पहले नक्शे पर किसी प्लॉट को सेलेक्ट करें!");
+
+        let rakbaText = currentlySelectedPlotLayer.calculatedRakbaText || "0.00 डिसमिल";
+        document.getElementById('autoPlotRakba').value = rakbaText;
+
+        let targetCenter = currentlySelectedPlotLayer.getBounds().getCenter();
+        let targetMap = currentlySelectedMap;
+        let isScale = (targetMap === scaleMap);
+
+        // Hide overlay UI elements so only pure map & drawings are captured
+        let hideSelectors = ['.floating-compass', '.floating-toolbar', '.floating-home-btn', '.fullscreen-toggle-btn', '.leaflet-control-zoom', '.leaflet-control-attribution'];
+        let hiddenElements = [];
+        hideSelectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                if (el.style.display !== 'none') {
+                    hiddenElements.push({ el: el, prev: el.style.display });
+                    el.style.display = 'none';
+                }
+            });
+        });
+
+        // Exact 16" = 1 Mile Cadastral Scale Calculation (1 Inch = 500 Kari)
+        let selectedBounds = currentlySelectedPlotLayer.getBounds();
+        let north = selectedBounds.getNorth(), south = selectedBounds.getSouth();
+        let east = selectedBounds.getEast(), west = selectedBounds.getWest();
+        let maxSpan = Math.max(north - south, east - west);
+
+        // Perfectly proportioned 16" = 1 Mile radius
+        let contextRadius = Math.max(maxSpan * 1.5, (isScale ? (pixelsPerUnit ? pixelsPerUnit * 500 : 550) : 0.0038));
+
+        let viewBounds = L.latLngBounds(
+            [targetCenter.lat - (contextRadius * 0.62), targetCenter.lng - contextRadius],
+            [targetCenter.lat + (contextRadius * 0.62), targetCenter.lng + contextRadius]
+        );
+
+        targetMap.fitBounds(viewBounds, { animate: false });
+        targetMap.setView(targetCenter, targetMap.getZoom(), { animate: false });
+        targetMap.invalidateSize(true);
+
+        // Explicitly re-attach highlight & labels to the exact active geometry
+        addLabelsToLayer(currentlySelectedPlotLayer, targetMap);
+
+        await new Promise(r => setTimeout(r, 450));
+
+        let mapWrapper = targetMap.getContainer();
+        
+        try {
+            let canvas = await html2canvas(mapWrapper, {
+                scale: 2.0,
+                useCORS: true,
+                logging: false,
+                allowTaint: true
+            });
+
+            // Restore screen UI elements
+            hiddenElements.forEach(item => { item.el.style.display = item.prev; });
+
+            // Freeze the exact visual image into the report container so PDF cannot displace it
+            document.getElementById('reportFrozenImage').src = canvas.toDataURL('image/png');
+            document.getElementById('surveyReportModal').style.display = 'flex';
+        } catch(err) {
+            hiddenElements.forEach(item => { item.el.style.display = item.prev; });
+            alert("Error generating map snapshot: " + err.message);
+        }
+    }
+
+    function closeSurveyReportModal() {
+        document.getElementById('surveyReportModal').style.display = 'none';
+    }
+
+    function addReportPlotRow() {
+        let tbody = document.getElementById('reportPlotsTbody');
+        let newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td><input type="text" placeholder="खाता"></td>
+            <td><input type="text" placeholder="खेसरा"></td>
+            <td><input type="text" placeholder="रकबा"></td>
+            <td><input type="text" placeholder="उत्तर"></td>
+            <td><input type="text" placeholder="दक्षिण"></td>
+            <td><input type="text" placeholder="पूरब"></td>
+            <td><input type="text" placeholder="पश्चिम"></td>
+        `;
+        tbody.appendChild(newRow);
+    }
+
+    function changeReportPlotColor(color) {
+        if (currentlySelectedPlotLayer) {
+            currentlySelectedPlotLayer.setStyle({ fillColor: color, color: color });
+            openSurveyReportModal();
+        }
+    }
+
+    function toggleReportEdges(isChecked) {
+        showReportEdges = isChecked;
+        let drawnGroup = (currentlySelectedMap === scaleMap) ? scaleDrawnItems : satDrawnItems;
+        drawnGroup.eachLayer(l => {
+            if (l.edgeLabels) {
+                if (isChecked) currentlySelectedMap.addLayer(l.edgeLabels);
+                else currentlySelectedMap.removeLayer(l.edgeLabels);
+            }
+        });
+        openSurveyReportModal();
+    }
+
+    function printA4SurveyReport() {
+        let paper = document.getElementById('reportA4PaperContent');
+
+        let clone = paper.cloneNode(true);
+        let origInputs = paper.querySelectorAll('input');
+        let cloneInputs = clone.querySelectorAll('input');
+
+        origInputs.forEach((inp, idx) => {
+            let span = document.createElement('span');
+            span.innerText = inp.value || inp.placeholder || "—";
+            span.style.fontWeight = inp.id === 'autoPlotRakba' ? 'bold' : 'normal';
+            if (inp.id === 'autoPlotRakba') span.style.color = '#b91c1c';
+            cloneInputs[idx].parentNode.replaceChild(span, cloneInputs[idx]);
+        });
+
+        let opt = {
+            margin:       [6, 6, 6, 6],
+            filename:     'Bhumi_Paimaish_Report.pdf',
+            image:        { type: 'jpeg', quality: 1.0 },
+            html2canvas:  { scale: 2.5, useCORS: true, logging: false },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(clone).save();
     }
 
     // ================= HIGH-DPI A0 SHEET PDF/IMAGE CONVERTER (NATIVE ULTRA-HD) =================
@@ -1371,29 +1674,172 @@
         } catch(e) { if(loadingEl) loadingEl.style.display = 'none'; alert("Error: " + e.message); }
     }
 
-    // ================= SATELLITE SEARCH, LIVE LOCATION & GEOREF =================
-    function searchLocation() { let query = document.getElementById('searchPlace').value; if (!query) return; fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`).then(res => res.json()).then(data => { if (data.length > 0) map.setView([data[0].lat, data[0].lon], 16); }); }
+    // ================= REAL-TIME MAGNETIC COMPASS SENSOR =================
+    function initCompassSensor() {
+        let updateCompass = (alpha) => {
+            let heading = 360 - alpha;
+            let scaleDial = document.getElementById('scaleCompassDial');
+            let satDial = document.getElementById('satCompassDial');
+            if (scaleDial) scaleDial.style.transform = `rotate(${heading}deg)`;
+            if (satDial) satDial.style.transform = `rotate(${heading}deg)`;
+        };
+
+        if ('ondeviceorientationabsolute' in window) {
+            window.addEventListener('deviceorientationabsolute', function(event) {
+                if (event.alpha !== null) updateCompass(event.alpha);
+            }, true);
+        } else if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', function(event) {
+                if (event.webkitCompassHeading) {
+                    let h = 360 - event.webkitCompassHeading;
+                    let scaleDial = document.getElementById('scaleCompassDial');
+                    let satDial = document.getElementById('satCompassDial');
+                    if (scaleDial) scaleDial.style.transform = `rotate(${h}deg)`;
+                    if (satDial) satDial.style.transform = `rotate(${h}deg)`;
+                } else if (event.alpha !== null) {
+                    updateCompass(event.alpha);
+                }
+            }, true);
+        }
+    }
+    initCompassSensor();
+
+    function requestCompassPermission() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        initCompassSensor();
+                        alert("✅ कंपास सेंसर एक्टिवेट हो गया है!");
+                    } else {
+                        alert("कंपास परमिशन अस्वीकार कर दी गई।");
+                    }
+                })
+                .catch(console.error);
+        } else {
+            alert("🧭 कंपास एक्टिव है! फोन को उत्तर-दक्षिण दिशा में घुमाकर चेक करें।");
+        }
+    }
+
+    // ================= 100% RELIABLE DUAL-STAGE GPS (FAST LOCK + ULTRA ACCURATE) =================
+    let liveLocationMarker = null;
+
+    function applyLocationToMap(lat, lng) {
+        let latlng = L.latLng(lat, lng);
+        map.setView(latlng, 18);
+
+        let googleLiveDotIcon = L.divIcon({
+            className: 'google-live-dot-wrap',
+            html: '<div class="google-live-dot-container"><div class="google-live-pulse"></div><div class="google-live-dot"></div></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        if (!liveLocationMarker) {
+            liveLocationMarker = L.marker(latlng, {
+                icon: googleLiveDotIcon,
+                interactive: false,
+                zIndexOffset: 1000
+            }).addTo(map);
+        } else {
+            liveLocationMarker.setLatLng(latlng);
+        }
+    }
 
     function goToLiveLocation() {
-        if (!navigator.geolocation) { alert("आपका ब्राउज़र Geolocation सपोर्ट नहीं करता है।"); return; }
-        alert("📍 आपकी वर्तमान लोकेशन खोजी जा रही है...");
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            alert("⚠️ सूचना: Android Chrome में GPS चलाने के लिए फाइल का HTTPS सर्वर (जैसे Netlify) या Localhost पर चलना आवश्यक है।");
+        }
+
+        if (!navigator.geolocation) { 
+            alert("आपका ब्राउज़र Geolocation सपोर्ट नहीं करता है।"); 
+            return; 
+        }
+
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                let lat = position.coords.latitude;
-                let lng = position.coords.longitude;
-                map.setView([lat, lng], 18);
-                L.marker([lat, lng], {icon: createPinIcon("📍", "#dc2626")}).addTo(map).bindPopup("आप यहाँ हैं!").openPopup();
-                alert("✅ लाइव लोकेशन मिल गई है!");
+            (pos) => {
+                applyLocationToMap(pos.coords.latitude, pos.coords.longitude);
+                navigator.geolocation.getCurrentPosition(
+                    (gpsPos) => { applyLocationToMap(gpsPos.coords.latitude, gpsPos.coords.longitude); },
+                    (err) => {},
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
             },
-            (error) => {
-                alert("❌ लोकेशन प्राप्त करने में असफल। कृपया GPS/Location परमिशन चेक करें।");
+            (err) => {
+                navigator.geolocation.getCurrentPosition(
+                    (gpsPos) => { applyLocationToMap(gpsPos.coords.latitude, gpsPos.coords.longitude); },
+                    (finalErr) => {
+                        let msg = "❌ लोकेशन प्राप्त करने में असफल।";
+                        if (finalErr.code === 1) msg = "❌ लोकेशन परमिशन अस्वीकार (Denied) है। ब्राउज़र सेटिंग में GPS परमिशन Allow करें।";
+                        else if (finalErr.code === 2) msg = "❌ GPS सिग्नल नहीं मिला। कृपया फोन का Location/GPS ऑन करें।";
+                        else if (finalErr.code === 3) msg = "❌ GPS रिस्पांस टाइमआउट। कृपया खुले आसमान के नीचे प्रयास करें।";
+                        alert(msg);
+                    },
+                    { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+                );
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
         );
     }
 
+    function searchLocation() { let query = document.getElementById('searchPlace').value; if (!query) return; fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`).then(res => res.json()).then(data => { if (data.length > 0) map.setView([data[0].lat, data[0].lon], 16); }); }
+
     let georefImageLayer = null; let georefBase64 = ""; let georefExt = "jpg"; let gcpPairs = []; let gcpCounter = 1; let currentGeorefCorners = {tl:null, tr:null, bl:null};
     
+    // STEP-BY-STEP POINT FLOW FOR SATELLITE GEOREF
+    let satPointStep = 0; // 0 = Idle, 1 = Red Pending, 2 = Blue Pending
+    let tempSatRed = null, tempSatBlue = null, tempSatLine = null;
+
+    function startSatPointFlow() {
+        if (!georefImageLayer) return alert("पहले नक्शा अपलोड करें।");
+        satPointStep = 1;
+        let center = map.getCenter();
+        tempSatRed = L.marker(center, { draggable: true, icon: createPinIcon(`R${gcpCounter}`, '#ef4444') }).addTo(map);
+        
+        document.getElementById('satAddPairBtn').style.display = 'none';
+        let okBtn = document.getElementById('satOkPointBtn');
+        okBtn.style.display = 'block';
+        okBtn.innerText = `✅ OK (लाल R${gcpCounter})`;
+        alert(`📍 चरण 1: लाल मार्कर (R${gcpCounter}) को अपलोड किए गए नक्शे के सही सीमाना/पॉइंट पर खींचें और 'OK' दबाएं।`);
+    }
+
+    function confirmSatPointStep() {
+        let okBtn = document.getElementById('satOkPointBtn');
+        if (satPointStep === 1) {
+            tempSatRed.dragging.disable();
+            satPointStep = 2;
+            let center = map.getCenter();
+            tempSatBlue = L.marker(center, { draggable: true, icon: createPinIcon(`B${gcpCounter}`, '#3b82f6') }).addTo(map);
+            tempSatLine = L.polyline([tempSatRed.getLatLng(), tempSatBlue.getLatLng()], { color: '#64748b', dashArray: '5, 5', weight: 2 }).addTo(map);
+            tempSatBlue.on('drag', () => { tempSatLine.setLatLngs([tempSatRed.getLatLng(), tempSatBlue.getLatLng()]); });
+            
+            okBtn.innerText = `✅ OK (नीला B${gcpCounter})`;
+            alert(`📍 चरण 2: अब नीले मार्कर (B${gcpCounter}) को सैटलाइट मैप के ठीक उसी स्थान पर रखें और 'OK' दबाएं।`);
+        } else if (satPointStep === 2) {
+            tempSatBlue.dragging.disable();
+            let pairObj = { red: tempSatRed, blue: tempSatBlue, line: tempSatLine };
+            gcpPairs.push(pairObj);
+            
+            let idx = gcpPairs.length - 1;
+            let delHandler = () => {
+                if (confirm(`पॉइंट #${idx + 1} को हटाना चाहते हैं?`)) {
+                    map.removeLayer(pairObj.red); map.removeLayer(pairObj.blue); map.removeLayer(pairObj.line);
+                    gcpPairs = gcpPairs.filter(p => p !== pairObj);
+                    alert("✅ पॉइंट हटा दिया गया।");
+                }
+            };
+            tempSatRed.on('click', delHandler);
+            tempSatBlue.on('click', delHandler);
+
+            satPointStep = 0;
+            tempSatRed = null; tempSatBlue = null; tempSatLine = null;
+            gcpCounter++;
+            okBtn.style.display = 'none';
+            document.getElementById('satAddPairBtn').style.display = 'block';
+            alert(`✅ पॉइंट #${gcpCounter - 1} सफलतापूर्वक जुड़ गया! इसी तरह अन्य पॉइंट्स भी जोड़ सकते हैं।`);
+        }
+    }
+
     function clearGeorefLayersOnly() { if (georefImageLayer) { map.removeLayer(georefImageLayer); georefImageLayer = null; } clearRefPairs(); let ctrls = document.getElementById('georefControls'); if(ctrls) ctrls.style.display = 'none'; }
     function deleteGeorefMap() { clearGeorefLayersOnly(); let imgInp = document.getElementById('satMapImage'); if(imgInp) imgInp.value = ""; georefBase64 = ""; }
     
@@ -1410,38 +1856,21 @@
     
     function changeOpacity(val) { if (georefImageLayer) georefImageLayer.setOpacity(val / 100); }
     
-    function addRefPair() {
-        if(!georefImageLayer) return alert("नक्शा अपलोड करें।");
-        let center = map.getCenter(); let offset = 0.0003 * gcpCounter; 
-        let ptRed = L.latLng(center.lat, center.lng - offset); let ptBlue = L.latLng(center.lat, center.lng + offset);
-        let mRed = L.marker(ptRed, {draggable: true, icon: createPinIcon(gcpCounter, '#ef4444')}).addTo(map); 
-        let mBlue = L.marker(ptBlue, {draggable: true, icon: createPinIcon(gcpCounter, '#3b82f6')}).addTo(map);
-        let line = L.polyline([ptRed, ptBlue], {color: '#64748b', dashArray: '5, 5', weight: 2}).addTo(map);
-        
-        mRed.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()])); 
-        mBlue.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()]));
-        
-        let pairObj = { red: mRed, blue: mBlue, line: line };
-        gcpPairs.push(pairObj); 
-        
-        let currentIndex = gcpPairs.length - 1;
-        let deleteHandler = () => {
-            if(confirm(`पॉइंट #${currentIndex + 1} को हटाना चाहते हैं?`)) {
-                map.removeLayer(pairObj.red); map.removeLayer(pairObj.blue); map.removeLayer(pairObj.line);
-                gcpPairs = gcpPairs.filter(p => p !== pairObj);
-                alert("✅ पॉइंट हटा दिया गया।");
-            }
-        };
-        mRed.on('click', deleteHandler); mBlue.on('click', deleteHandler);
-        
-        gcpCounter++;
-        alert(`✅ पॉइंट #${gcpCounter - 1} जुड़ गया। (हटाने के लिए पिन पर क्लिक करें)`);
+    function clearRefPairs() { 
+        gcpPairs.forEach(p => { map.removeLayer(p.red); map.removeLayer(p.blue); map.removeLayer(p.line); }); 
+        gcpPairs = []; gcpCounter = 1; 
+        satPointStep = 0;
+        if(tempSatRed) map.removeLayer(tempSatRed);
+        if(tempSatBlue) map.removeLayer(tempSatBlue);
+        if(tempSatLine) map.removeLayer(tempSatLine);
+        tempSatRed = null; tempSatBlue = null; tempSatLine = null;
+        let okBtn = document.getElementById('satOkPointBtn'); if(okBtn) okBtn.style.display = 'none';
+        let addBtn = document.getElementById('satAddPairBtn'); if(addBtn) addBtn.style.display = 'block';
     }
     
-    function clearRefPairs() { gcpPairs.forEach(p => { map.removeLayer(p.red); map.removeLayer(p.blue); map.removeLayer(p.line); }); gcpPairs = []; gcpCounter = 1; }
-    
+    // FULL 2D AFFINE TRANSFORMATION (STRETCH / ROTATE / SCALE ACCURACY)
     function alignMap() {
-        if (!georefImageLayer || gcpPairs.length < 2) return alert("कम से कम 2 पॉइंट ज़रूरी हैं!");
+        if (!georefImageLayer || gcpPairs.length < 2) return alert("सटीक अलाइनमेंट और स्ट्रेचिंग के लिए कम से कम 2 पॉइंट्स आवश्यक हैं!");
         let zoom = map.getZoom();
         let srcLatLngs = gcpPairs.map(p => p.red.getLatLng());
         let dstLatLngs = gcpPairs.map(p => p.blue.getLatLng());
@@ -1457,15 +1886,42 @@
         }
         let cx = sumX / n, cy = sumY / n, cu = sumU / n, cv = sumV / n;
 
-        let num = 0, den = 0;
+        let sxx = 0, syy = 0, sxy = 0, sxu = 0, syu = 0, sxv = 0, syv = 0;
         for (let i = 0; i < n; i++) {
-            let dx = srcProj[i].x - cx, dy = srcProj[i].y - cy;
-            let du = dstProj[i].x - cu, dv = dstProj[i].y - cv;
-            num += (dx * du + dy * dv);
-            den += (dx * dx + dy * dy);
+            let dx = srcProj[i].x - cx;
+            let dy = srcProj[i].y - cy;
+            let du = dstProj[i].x - cu;
+            let dv = dstProj[i].y - cv;
+
+            sxx += dx * dx;
+            syy += dy * dy;
+            sxy += dx * dy;
+            sxu += dx * du;
+            syu += dy * du;
+            sxv += dx * dv;
+            syv += dy * dv;
         }
-        let scale = den !== 0 ? num / den : 1;
-        let a = scale, b = 0, c = cu - scale * cx, d = 0, e = scale, f = cv - scale * cy;
+
+        let det = sxx * syy - sxy * sxy;
+        let a, b, d, e;
+        if (Math.abs(det) > 1e-7 && n >= 3) {
+            // General 2D Affine Stretch (Rubber-Sheet)
+            a = (syy * sxu - sxy * syu) / det;
+            b = (sxx * syu - sxy * sxu) / det;
+            d = (syy * sxv - sxy * syv) / det;
+            e = (sxx * syv - sxy * sxv) / det;
+        } else {
+            // Conformal Similarity (Scale + Rotate) for 2 points
+            let den = sxx + syy;
+            if(den === 0) return alert("पॉइंट्स एक ही जगह पर हैं, कृपया अलग-अलग कोनों पर चुनें!");
+            a = (sxu + syv) / den;
+            b = (syu - sxv) / den;
+            d = -b;
+            e = a;
+        }
+
+        let c = cu - (a * cx + b * cy);
+        let f = cv - (d * cx + e * cy);
 
         let trans = (ll) => {
             let pt = map.project(ll, zoom);
@@ -1480,10 +1936,10 @@
         
         gcpPairs.forEach(p => {
             p.red.setLatLng(p.blue.getLatLng());
-            p.line.setLatLngs([p.red.getLatLng(), p.blue.getLatLng()]);
+            p.line.setLatLngs([p.blue.getLatLng(), p.blue.getLatLng()]);
         });
 
-        alert("✅ नक्शा सफलतापूर्वक अलाइन और स्ट्रेच हो गया है!");
+        alert("✅ सैटलाइट मैप पर नक्शा 100% सही अलाइन और स्ट्रेच (Scale, Rotate & Fit) हो गया है!");
     }
     
     function exportKMZ() {
@@ -1512,11 +1968,14 @@
         }
     }
 
-    // ================= 100% ACCURATE 2D AFFINE OVERLAP ALIGNMENT (PLANE MATH) =================
+    // ================= STEP-BY-STEP POINT FLOW & 2D AFFINE OVERLAP ALIGNMENT =================
     let overlapMap = L.map('overlapMap', { crs: L.CRS.Simple, minZoom: -5, maxZoom: 8 });
     let baseOverlapLayer = null; let redOverlapLayer = null; 
     let redCorners = { tl: null, tr: null, bl: null };
     let overlapGcpPairs = []; let overlapGcpCounter = 1;
+
+    let overlapPointStep = 0; // 0 = Idle, 1 = Red Pending, 2 = Blue Pending
+    let tempOvRed = null, tempOvBlue = null, tempOvLine = null;
 
     async function applyColorFilterUltraHd(imageSource) {
         return new Promise((resolve) => {
@@ -1633,50 +2092,72 @@
         if(ovCtrls) ovCtrls.style.display = 'none';
     }
 
-    function addOverlapRefPair() {
-        if(!redOverlapLayer) return alert("पहले लाल नक्शा (ऊपरी नक्शा) अपलोड करें।");
-        
+    function startOverlapPointFlow() {
+        if (!redOverlapLayer) return alert("पहले लाल नक्शा (ऊपरी नक्शा) अपलोड करें।");
+        overlapPointStep = 1;
         let bounds = redOverlapLayer.getBounds();
         let center = bounds.getCenter();
-        let offset = (bounds.getNorth() - bounds.getSouth()) * 0.08 * overlapGcpCounter; 
+        tempOvRed = L.marker(center, { draggable: true, icon: createPinIcon(`R${overlapGcpCounter}`, '#ef4444') }).addTo(overlapMap);
         
-        let ptRed = L.latLng(center.lat, center.lng - offset); 
-        let ptBlue = L.latLng(center.lat + offset*0.2, center.lng + offset);
-        
-        let mRed = L.marker(ptRed, {draggable: true, icon: createPinIcon(`R${overlapGcpCounter}`, '#ef4444')}).addTo(overlapMap); 
-        let mBlue = L.marker(ptBlue, {draggable: true, icon: createPinIcon(`B${overlapGcpCounter}`, '#2563eb')}).addTo(overlapMap);
-        let line = L.polyline([ptRed, ptBlue], {color: '#dc2626', dashArray: '4, 4', weight: 2}).addTo(overlapMap);
-        
-        mRed.bindTooltip(`लाल पॉइंट ${overlapGcpCounter} (लाल नक्शे के निशान पर रखें)`, {direction:'top'});
-        mBlue.bindTooltip(`नीला पॉइंट ${overlapGcpCounter} (मूल नक्शे के सही स्थान पर रखें)`, {direction:'top'});
+        document.getElementById('overlapAddPairBtn').style.display = 'none';
+        let okBtn = document.getElementById('overlapOkPointBtn');
+        okBtn.style.display = 'block';
+        okBtn.innerText = `✅ OK (लाल R${overlapGcpCounter})`;
+        alert(`📍 चरण 1: लाल मार्कर (R${overlapGcpCounter}) को लाल नक्शे के सही सीमाना/पॉइंट पर खींचें और 'OK' दबाएं।`);
+    }
 
-        mRed.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()])); 
-        mBlue.on('drag', () => line.setLatLngs([mRed.getLatLng(), mBlue.getLatLng()]));
-        
-        let pairObj = { red: mRed, blue: mBlue, line: line };
-        overlapGcpPairs.push(pairObj); 
-        
-        let currentIndex = overlapGcpPairs.length - 1;
-        let deleteHandler = () => {
-            if(confirm(`कंट्रोल पॉइंट #${currentIndex + 1} को हटाना चाहते हैं?`)) {
-                overlapMap.removeLayer(pairObj.red); overlapMap.removeLayer(pairObj.blue); overlapMap.removeLayer(pairObj.line);
-                overlapGcpPairs = overlapGcpPairs.filter(p => p !== pairObj);
-                alert("✅ पॉइंट हटा दिया गया।");
-            }
-        };
-        mRed.on('click', deleteHandler); mBlue.on('click', deleteHandler);
-        
-        overlapGcpCounter++;
-        alert(`✅ पॉइंट जोड़ा गया!\n🔴 लाल पिन (R${overlapGcpCounter-1}) को लाल नक्शे के निशान पर रखें।\n🔵 नीले पिन (B${overlapGcpCounter-1}) को मूल नक्शे की सही जगह पर रखें।`);
+    function confirmOverlapPointStep() {
+        let okBtn = document.getElementById('overlapOkPointBtn');
+        if (overlapPointStep === 1) {
+            tempOvRed.dragging.disable();
+            overlapPointStep = 2;
+            let center = overlapMap.getCenter();
+            tempOvBlue = L.marker(center, { draggable: true, icon: createPinIcon(`B${overlapGcpCounter}`, '#2563eb') }).addTo(overlapMap);
+            tempOvLine = L.polyline([tempOvRed.getLatLng(), tempOvBlue.getLatLng()], { color: '#dc2626', dashArray: '4, 4', weight: 2 }).addTo(overlapMap);
+            tempOvBlue.on('drag', () => { tempOvLine.setLatLngs([tempOvRed.getLatLng(), tempOvBlue.getLatLng()]); });
+
+            okBtn.innerText = `✅ OK (नीला B${overlapGcpCounter})`;
+            alert(`📍 चरण 2: अब नीले मार्कर (B${overlapGcpCounter}) को आधार नक्शे के ठीक उसी स्थान पर रखें और 'OK' दबाएं।`);
+        } else if (overlapPointStep === 2) {
+            tempOvBlue.dragging.disable();
+            let pairObj = { red: tempOvRed, blue: tempOvBlue, line: tempOvLine };
+            overlapGcpPairs.push(pairObj);
+            
+            let idx = overlapGcpPairs.length - 1;
+            let delHandler = () => {
+                if (confirm(`कंट्रोल पॉइंट #${idx + 1} को हटाना चाहते हैं?`)) {
+                    overlapMap.removeLayer(pairObj.red); overlapMap.removeLayer(pairObj.blue); overlapMap.removeLayer(pairObj.line);
+                    overlapGcpPairs = overlapGcpPairs.filter(p => p !== pairObj);
+                    alert("✅ पॉइंट हटा दिया गया।");
+                }
+            };
+            tempOvRed.on('click', delHandler);
+            tempOvBlue.on('click', delHandler);
+
+            overlapPointStep = 0;
+            tempOvRed = null; tempOvBlue = null; tempOvLine = null;
+            overlapGcpCounter++;
+            okBtn.style.display = 'none';
+            document.getElementById('overlapAddPairBtn').style.display = 'block';
+            alert(`✅ पॉइंट #${overlapGcpCounter - 1} सफलतापूर्वक जुड़ गया! इसी तरह अन्य पॉइंट्स भी जोड़ सकते हैं।`);
+        }
     }
 
     function clearOverlapRefPairs() {
         overlapGcpPairs.forEach(p => { overlapMap.removeLayer(p.red); overlapMap.removeLayer(p.blue); overlapMap.removeLayer(p.line); }); 
         overlapGcpPairs = []; overlapGcpCounter = 1; 
+        overlapPointStep = 0;
+        if(tempOvRed) overlapMap.removeLayer(tempOvRed);
+        if(tempOvBlue) overlapMap.removeLayer(tempOvBlue);
+        if(tempOvLine) overlapMap.removeLayer(tempOvLine);
+        tempOvRed = null; tempOvBlue = null; tempOvLine = null;
+        let okBtn = document.getElementById('overlapOkPointBtn'); if(okBtn) okBtn.style.display = 'none';
+        let addBtn = document.getElementById('overlapAddPairBtn'); if(addBtn) addBtn.style.display = 'block';
     }
 
+    // FULL 2D AFFINE TRANSFORMATION FOR MAP OVERLAP (PREVENTS CORNER DISPLACEMENT)
     function alignOverlapMap() {
-        if (!redOverlapLayer || overlapGcpPairs.length < 2) return alert("सटीक मिलान के लिए कम से कम 2 कंट्रोल पॉइंट्स जरूरी हैं!");
+        if (!redOverlapLayer || overlapGcpPairs.length < 2) return alert("सटीक मिलान और स्ट्रेचिंग के लिए कम से कम 2 कंट्रोल पॉइंट्स जरूरी हैं!");
         
         let n = overlapGcpPairs.length;
         let srcX = [], srcY = [], dstX = [], dstY = [];
@@ -1696,30 +2177,48 @@
         let meanSX = sumSX / n, meanSY = sumSY / n;
         let meanDX = sumDX / n, meanDY = sumDY / n;
 
-        let num_a = 0, num_b = 0, den = 0;
+        let sxx = 0, syy = 0, sxy = 0, sxu = 0, syu = 0, sxv = 0, syv = 0;
         for (let i = 0; i < n; i++) {
-            let xs = srcX[i] - meanSX;
-            let ys = srcY[i] - meanSY;
-            let xd = dstX[i] - meanDX;
-            let yd = dstY[i] - meanDY;
+            let dx = srcX[i] - meanSX;
+            let dy = srcY[i] - meanSY;
+            let du = dstX[i] - meanDX;
+            let dv = dstY[i] - meanDY;
 
-            num_a += (xs * xd + ys * yd);
-            num_b += (xs * yd - ys * xd);
-            den += (xs * xs + ys * ys);
+            sxx += dx * dx;
+            syy += dy * dy;
+            sxy += dx * dy;
+            sxu += dx * du;
+            syu += dy * du;
+            sxv += dx * dv;
+            syv += dy * dv;
         }
 
-        if (den === 0) return alert("पॉइंट्स एक ही जगह पर हैं, कृपया अलग-अलग कोनों पर पॉइंट्स चुनें!");
+        let det = sxx * syy - sxy * sxy;
+        let a, b, d, e;
+        if (Math.abs(det) > 1e-7 && n >= 3) {
+            // Full Affine Stretch (Rubber-Sheet) for 3+ points
+            a = (syy * sxu - sxy * syu) / det;
+            b = (sxx * syu - sxy * sxu) / det;
+            d = (syy * sxv - sxy * syv) / det;
+            e = (sxx * syv - sxy * sxv) / det;
+        } else {
+            // Conformal Similarity (Scale + Rotate) for 2 points
+            let den = sxx + syy;
+            if(den === 0) return alert("पॉइंट्स एक ही जगह पर हैं, कृपया अलग-अलग कोनों पर पॉइंट्स चुनें!");
+            a = (sxu + syv) / den;
+            b = (syu - sxv) / den;
+            d = -b;
+            e = a;
+        }
 
-        let a = num_a / den;
-        let b = num_b / den;
-        let tx = meanDX - (a * meanSX - b * meanSY);
-        let ty = meanDY - (b * meanSX + a * meanSY);
+        let tx = meanDX - (a * meanSX + b * meanSY);
+        let ty = meanDY - (d * meanSX + e * meanSY);
 
         let transformPoint = (latlng) => {
             let x = latlng.lng;
             let y = latlng.lat;
-            let newX = a * x - b * y + tx;
-            let newY = b * x + a * y + ty;
+            let newX = a * x + b * y + tx;
+            let newY = d * x + e * y + ty;
             return L.latLng(newY, newX);
         };
 
@@ -1734,7 +2233,7 @@
             p.line.setLatLngs([p.blue.getLatLng(), p.blue.getLatLng()]);
         });
 
-        alert("✅ लाल नक्शा आधार नक्शे पर 100% सही अलाइन (Scale, Rotate & Fit) हो गया है!");
+        alert("✅ लाल नक्शा आधार नक्शे पर 100% सही अलाइन और स्ट्रेच (Scale, Rotate & Fit) हो गया है!");
     }
 </script>
 
