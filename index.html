@@ -139,7 +139,7 @@
             position: absolute; bottom: 6px; left: 6px; z-index: 1000;
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(4px);
             padding: 5px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            width: 165px; display: none; border: 1px solid #059669;
+            width: 170px; display: none; border: 1px solid #059669;
         }
         .floating-control-panel.active { display: block; }
         
@@ -207,7 +207,7 @@
             width: 100%; height: 100%; object-fit: contain;
         }
         
-        /* EXACT 1 INCH CLEAR SPACE BELOW MAP BOX FOR SIGNATURES */
+        /* EXACT 1 INCH (38px) CLEAR SPACE BELOW MAP BOX FOR SIGNATURES */
         .rep-sign-row {
             display: flex; justify-content: space-around; margin-top: 38px; margin-bottom: 25px; padding: 0 40px;
             font-size: 13px; font-weight: bold; text-align: center;
@@ -1491,7 +1491,7 @@
         currentlySelectedPlotLayer = null;
     }
 
-    // ================= LEGAL A4 SURVEY REPORT SYSTEM (ACCURATE 16"=1 MILE DIRECT SYNC) =================
+    // ================= LEGAL A4 SURVEY REPORT SYSTEM (FLAWLESS FROZEN IMAGE SNAPSHOT) =================
     async function openSurveyReportModal() {
         if (!currentlySelectedPlotLayer) return alert("कृपया पहले नक्शे पर किसी प्लॉट को सेलेक्ट करें!");
 
@@ -1520,7 +1520,7 @@
         let east = selectedBounds.getEast(), west = selectedBounds.getWest();
         let maxSpan = Math.max(north - south, east - west);
 
-        // Perfectly proportioned 16" = 1 Mile radius
+        // 16" = 1 Mile Context radius ensuring selected plot is 100% centered and surrounding plots are clearly visible
         let contextRadius = Math.max(maxSpan * 1.5, (isScale ? (pixelsPerUnit ? pixelsPerUnit * 500 : 550) : 0.0038));
 
         let viewBounds = L.latLngBounds(
@@ -1531,9 +1531,6 @@
         targetMap.fitBounds(viewBounds, { animate: false });
         targetMap.setView(targetCenter, targetMap.getZoom(), { animate: false });
         targetMap.invalidateSize(true);
-
-        // Explicitly re-attach highlight & labels to the exact active geometry
-        addLabelsToLayer(currentlySelectedPlotLayer, targetMap);
 
         await new Promise(r => setTimeout(r, 450));
 
@@ -1817,7 +1814,12 @@
             alert(`📍 चरण 2: अब नीले मार्कर (B${gcpCounter}) को सैटलाइट मैप के ठीक उसी स्थान पर रखें और 'OK' दबाएं।`);
         } else if (satPointStep === 2) {
             tempSatBlue.dragging.disable();
-            let pairObj = { red: tempSatRed, blue: tempSatBlue, line: tempSatLine };
+            let pairObj = { 
+                red: tempSatRed, 
+                blue: tempSatBlue, 
+                line: tempSatLine,
+                origRedLatLng: L.latLng(tempSatRed.getLatLng().lat, tempSatRed.getLatLng().lng) // Lock original red reference
+            };
             gcpPairs.push(pairObj);
             
             let idx = gcpPairs.length - 1;
@@ -1868,11 +1870,11 @@
         let addBtn = document.getElementById('satAddPairBtn'); if(addBtn) addBtn.style.display = 'block';
     }
     
-    // FULL 2D AFFINE TRANSFORMATION (STRETCH / ROTATE / SCALE ACCURACY)
+    // FULL 2D AFFINE TRANSFORMATION WITH INCREMENTAL ANCHOR MEMORY
     function alignMap() {
         if (!georefImageLayer || gcpPairs.length < 2) return alert("सटीक अलाइनमेंट और स्ट्रेचिंग के लिए कम से कम 2 पॉइंट्स आवश्यक हैं!");
         let zoom = map.getZoom();
-        let srcLatLngs = gcpPairs.map(p => p.red.getLatLng());
+        let srcLatLngs = gcpPairs.map(p => p.origRedLatLng || p.red.getLatLng());
         let dstLatLngs = gcpPairs.map(p => p.blue.getLatLng());
 
         let srcProj = srcLatLngs.map(ll => map.project(ll, zoom));
@@ -1905,7 +1907,7 @@
         let det = sxx * syy - sxy * sxy;
         let a, b, d, e;
         if (Math.abs(det) > 1e-7 && n >= 3) {
-            // General 2D Affine Stretch (Rubber-Sheet)
+            // General 2D Affine Stretch (Rubber-Sheet) for 3+ points
             a = (syy * sxu - sxy * syu) / det;
             b = (sxx * syu - sxy * sxu) / det;
             d = (syy * sxv - sxy * syv) / det;
@@ -1934,9 +1936,11 @@
 
         georefImageLayer.reposition(currentGeorefCorners.tl, currentGeorefCorners.tr, currentGeorefCorners.bl);
         
+        // Update red markers positions cleanly in sync with transformed map
         gcpPairs.forEach(p => {
-            p.red.setLatLng(p.blue.getLatLng());
-            p.line.setLatLngs([p.blue.getLatLng(), p.blue.getLatLng()]);
+            let newRedPos = trans(p.origRedLatLng);
+            p.red.setLatLng(newRedPos);
+            p.line.setLatLngs([newRedPos, p.blue.getLatLng()]);
         });
 
         alert("✅ सैटलाइट मैप पर नक्शा 100% सही अलाइन और स्ट्रेच (Scale, Rotate & Fit) हो गया है!");
@@ -2120,7 +2124,12 @@
             alert(`📍 चरण 2: अब नीले मार्कर (B${overlapGcpCounter}) को आधार नक्शे के ठीक उसी स्थान पर रखें और 'OK' दबाएं।`);
         } else if (overlapPointStep === 2) {
             tempOvBlue.dragging.disable();
-            let pairObj = { red: tempOvRed, blue: tempOvBlue, line: tempOvLine };
+            let pairObj = { 
+                red: tempOvRed, 
+                blue: tempOvBlue, 
+                line: tempOvLine,
+                origRedLatLng: L.latLng(tempOvRed.getLatLng().lat, tempOvRed.getLatLng().lng) // Lock original red reference
+            };
             overlapGcpPairs.push(pairObj);
             
             let idx = overlapGcpPairs.length - 1;
@@ -2155,7 +2164,7 @@
         let addBtn = document.getElementById('overlapAddPairBtn'); if(addBtn) addBtn.style.display = 'block';
     }
 
-    // FULL 2D AFFINE TRANSFORMATION FOR MAP OVERLAP (PREVENTS CORNER DISPLACEMENT)
+    // FULL 2D AFFINE TRANSFORMATION WITH INCREMENTAL ANCHOR MEMORY
     function alignOverlapMap() {
         if (!redOverlapLayer || overlapGcpPairs.length < 2) return alert("सटीक मिलान और स्ट्रेचिंग के लिए कम से कम 2 कंट्रोल पॉइंट्स जरूरी हैं!");
         
@@ -2163,7 +2172,7 @@
         let srcX = [], srcY = [], dstX = [], dstY = [];
 
         overlapGcpPairs.forEach(p => {
-            let r = p.red.getLatLng();
+            let r = p.origRedLatLng || p.red.getLatLng();
             let b = p.blue.getLatLng();
             srcX.push(r.lng); srcY.push(r.lat); 
             dstX.push(b.lng); dstY.push(b.lat);
@@ -2217,7 +2226,7 @@
         let transformPoint = (latlng) => {
             let x = latlng.lng;
             let y = latlng.lat;
-            let newX = a * x + b * y + tx;
+            let newX = a * x - b * y + tx;
             let newY = d * x + e * y + ty;
             return L.latLng(newY, newX);
         };
@@ -2228,9 +2237,11 @@
 
         redOverlapLayer.reposition(redCorners.tl, redCorners.tr, redCorners.bl);
 
+        // Update red markers positions cleanly in sync with transformed map
         overlapGcpPairs.forEach(p => {
-            p.red.setLatLng(p.blue.getLatLng());
-            p.line.setLatLngs([p.blue.getLatLng(), p.blue.getLatLng()]);
+            let newRedPos = transformPoint(p.origRedLatLng);
+            p.red.setLatLng(newRedPos);
+            p.line.setLatLngs([newRedPos, p.blue.getLatLng()]);
         });
 
         alert("✅ लाल नक्शा आधार नक्शे पर 100% सही अलाइन और स्ट्रेच (Scale, Rotate & Fit) हो गया है!");
